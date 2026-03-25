@@ -2,123 +2,110 @@
 
 ## ¿Qué es Kivio?
 
-Kivio es una plataforma de búsqueda de compañeros de piso y habitaciones compartidas orientada a estudiantes y jóvenes profesionales en España. El creador es **Mario Rodríguez** (19 años).
+Kivio es una plataforma de búsqueda de compañeros de piso y habitaciones compartidas orientada a estudiantes y jóvenes profesionales en España. El creador es **Mario Rodríguez** (19 años), es su TFG.
 
 El objetivo principal es conectar a personas que buscan habitación con propietarios que ofrecen alojamiento compartido, con énfasis en **perfiles verificados** y **compatibilidad entre usuarios**.
 
 ---
 
-## Estado actual
+## Estado actual (2026-03-25)
 
-- La app **ya existe en formato móvil** (React Native / Expo, previsiblemente).
-- El **backend ya está montado en Supabase** (base de datos PostgreSQL + funciones Edge + Auth).
-- Este repositorio es la **versión web** que se construye desde cero, conectándose a la misma Supabase.
+- La app **ya existe en formato móvil** (React Native / Expo).
+- El **backend ya está montado en Supabase** (compartido con la app móvil).
+- Este repositorio es la **versión web** conectada a la misma Supabase.
+
+### Páginas completadas ✅
+- **Login** (`/login`) — email + password, logo, link a register
+- **Register** (`/register`) — onboarding 5 pasos con todos los campos de `profiles`, usa `safe_insert_pending_profile` RPC + pantalla de confirmación de email
+- **Home** (`/`) — saludo con avatar, fila horizontal de habitaciones (scroll con flechas), fila horizontal de compañeros, acciones rápidas
+
+### Páginas pendientes ⏳
+- **Buscar** (`/buscar`) — tabs Habitaciones/Compañeros, filtros, cards con compatibilidad
+- **Publicar** (`/publicar`) — tabs Habitación/Compañero, formularios completos
+- **Chat** (`/chat` + `/chat/:conversationId`) — lista conversaciones + panel mensajes con Realtime
+- **Perfil** (`/perfil`) — ver/editar perfil, mis anuncios, favoritos
 
 ---
 
-## Stack tecnológico (Web)
+## Stack tecnológico
 
 | Capa | Tecnología |
 |---|---|
 | Framework | React 19 + TypeScript |
 | Build tool | Vite |
-| Estilos | Tailwind CSS |
+| Estilos | Tailwind CSS v4 |
 | Componentes UI | **shadcn/ui (100%)** — sin otros sistemas de componentes |
 | Backend / DB | Supabase (compartido con la app móvil) |
 | Auth | Supabase Auth (mismo sistema que la app) |
-| Router | React Router v7 (por definir) |
-| Estado global | Por definir (Zustand o Context API) |
+| Router | React Router v7 (library mode) |
+| Estado global | Context API (`AuthContext`) |
 
 > **Regla clave:** Todos los componentes de interfaz deben usarse desde shadcn/ui. No mezclar con otras librerías de UI.
 
 ---
 
-## Funcionalidades principales (extraídas de kivio.es y la app)
-
-### Para usuarios que buscan piso / habitación
-- Registro y login con perfil verificado
-- Búsqueda de habitaciones con filtros avanzados (ciudad, precio, estilo de vida…)
-- Ver fichas de habitaciones con fotos, precio y amenities
-- Sistema de mensajería integrado con propietarios
-- Matching de compatibilidad con otros usuarios
-
-### Para propietarios
-- Publicar anuncios de habitaciones con fotos y precios
-- Panel de gestión de solicitudes y candidatos
-- Editar y eliminar listados
-
-### General
-- Blog / artículos de ayuda (selección de compañero, guías de barrios, convivencia)
-- Cobertura geográfica: Madrid, Barcelona, Valencia y toda España
-
----
-
-## Base de datos (Supabase — pendiente de documentar)
-
-> La estructura exacta se completará una vez que se configure el MCP de Supabase.
-> Lo que se sabe hasta ahora:
-> - Existe una tabla de **usuarios/perfiles**
-> - Existe una tabla de **habitaciones/anuncios**
-> - Existe un sistema de **mensajería**
-> - Existe un sistema de **matching / compatibilidad**
-> - Posiblemente tablas de **solicitudes** y **favoritos**
-
----
-
-## Estructura de carpetas prevista (src/)
+## Estructura de carpetas (src/)
 
 ```
 src/
-├── components/          # Componentes reutilizables (basados en shadcn)
+├── assets/              # kiviologo.png
+├── components/
+│   ├── layout/          # AppSidebar.tsx
 │   └── ui/              # Componentes shadcn generados
-├── pages/               # Vistas / rutas principales
-│   ├── auth/            # Login, registro
-│   ├── home/            # Landing / búsqueda
-│   ├── rooms/           # Listado y detalle de habitaciones
-│   ├── profile/         # Perfil de usuario
-│   ├── messages/        # Mensajería
-│   └── dashboard/       # Panel de propietario
+├── contexts/            # AuthContext.tsx
+├── layouts/             # AppLayout.tsx (SidebarProvider + max-w-5xl centrado)
 ├── lib/
 │   ├── supabase.ts      # Cliente Supabase
-│   └── utils.ts         # Utilidades (shadcn cn helper)
-├── hooks/               # Custom hooks
-├── store/               # Estado global
-└── types/               # Tipos TypeScript compartidos
+│   └── utils.ts
+├── pages/
+│   ├── auth/            # LoginPage.tsx, RegisterPage.tsx
+│   ├── home/            # HomePage.tsx ✅
+│   ├── search/          # SearchPage.tsx (placeholder)
+│   ├── publish/         # PublishPage.tsx (placeholder)
+│   ├── chat/            # ChatPage.tsx (placeholder)
+│   └── profile/         # ProfilePage.tsx (placeholder)
+└── types/               # database.ts (tipos completos de Supabase)
 ```
 
 ---
 
-## Rutas previstas
+## Rutas
 
-| Ruta | Vista |
-|---|---|
-| `/` | Landing / home con búsqueda |
-| `/login` | Login |
-| `/register` | Registro |
-| `/rooms` | Listado de habitaciones (búsqueda + filtros) |
-| `/rooms/:id` | Detalle de habitación |
-| `/profile/:id` | Perfil de usuario |
-| `/messages` | Bandeja de mensajes |
-| `/dashboard` | Panel del propietario |
-| `/dashboard/new` | Crear nuevo anuncio |
-
----
-
-## Notas de desarrollo
-
-- La versión web debe ser **responsive**, priorizando escritorio pero funcional en móvil.
-- El diseño debe mantener la identidad visual de Kivio (colores, logo, tono).
-- Se conecta a la **misma Supabase** que la app móvil: no hay migración de datos, solo conexión al proyecto existente.
-- Las **Edge Functions** de Supabase ya existentes (notificaciones, matching, etc.) también estarán disponibles.
-- El proyecto es un **TFG** (Trabajo de Fin de Grado), por lo que la calidad del código y arquitectura son importantes.
+| Ruta | Vista | Estado |
+|---|---|---|
+| `/login` | Login | ✅ |
+| `/register` | Registro multi-step | ✅ |
+| `/` | Home | ✅ |
+| `/buscar` | Búsqueda | ⏳ |
+| `/publicar` | Publicar anuncio | ⏳ |
+| `/chat` | Lista de chats | ⏳ |
+| `/chat/:conversationId` | Conversación | ⏳ |
+| `/perfil` | Perfil | ⏳ |
 
 ---
 
-## Pendiente antes de empezar a codificar
+## Detalles de implementación clave
 
-- [ ] Configurar MCP de Supabase para explorar el esquema de la base de datos
-- [ ] Documentar todas las tablas y relaciones
-- [ ] Documentar las Edge Functions disponibles
-- [ ] Instalar y configurar dependencias: Tailwind, shadcn, React Router, Supabase JS, Zustand
-- [ ] Configurar variables de entorno (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
-- [ ] Inicializar shadcn en el proyecto
+### Auth flow
+- Email confirmation requerida
+- No hay INSERT trigger en `auth.users`
+- Solo hay trigger UPDATE (`on_auth_user_confirmed_improved`) que llama a `move_pending_to_profiles()`
+- `safe_insert_pending_profile()` RPC es SECURITY DEFINER — funciona sin sesión activa
+
+### Color principal
+- `#8052E0` → `oklch(0.55 0.22 287)` — aplicado en `src/index.css` como `--primary`
+
+### Layout
+- `AppLayout` tiene `max-w-5xl mx-auto` centrado sobre el contenido de todas las páginas
+- Sidebar `collapsible="icon"` con logo, navegación y footer de usuario
+
+### Cards en scroll horizontal (ScrollRow)
+- Las cards deben usar `ring-0 border` en lugar del `ring-1` por defecto de shadcn/ui Card
+- Motivo: `ring-1` usa `box-shadow` que se recorta con `overflow-x: auto`
+- `border` es parte del box model y no se recorta
+- ScrollRow usa `py-2 -my-2` para que el `hover:shadow-md` no se recorte verticalmente
+- `snap-x snap-mandatory` + `snap-start` en cada card para scroll limpio sin cards cortadas
+
+### search_compatible_listings
+- Puede devolver 400 si el usuario no tiene fila en `profiles`
+- Fallback: `get_public_listings`
