@@ -392,7 +392,7 @@ export default function RegisterPage() {
 
     // 2. Guardar perfil completo en pending_profiles via RPC SECURITY DEFINER
     //    (no requiere sesión activa, funciona antes de confirmar email)
-    const { error: pendingError } = await supabase.rpc('safe_insert_pending_profile', {
+    const { data: rpcData, error: pendingError } = await supabase.rpc('safe_insert_pending_profile', {
       p_id: authData.user.id,
       p_email: data.email,
       p_full_name: data.full_name,
@@ -421,10 +421,20 @@ export default function RegisterPage() {
     })
 
     if (pendingError) {
-      // Si el perfil ya existe en profiles (ej. email ya registrado) mostramos error
-      setError('Este email ya está registrado. ¿Quieres iniciar sesión?')
+      setError('Error al guardar el perfil. Inténtalo de nuevo.')
       setLoading(false)
       return
+    }
+
+    const rpcResult = Array.isArray(rpcData) ? rpcData[0] : rpcData
+    if (!rpcResult?.success) {
+      // Email ya existe en profiles → cuenta confirmada, debe iniciar sesión
+      if (rpcResult?.message?.includes('profiles table')) {
+        setError('Este email ya está registrado. ¿Quieres iniciar sesión?')
+        setLoading(false)
+        return
+      }
+      // Email ya existe en pending_profiles → registro previo sin confirmar, mostramos confirmación
     }
 
     // 3. Mostrar pantalla de confirmación de email

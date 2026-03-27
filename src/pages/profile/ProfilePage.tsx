@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -15,10 +15,12 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Pencil, LogOut, MapPin, Briefcase, Sun, Moon, AlarmClock, Cigarette,
   PartyPopper, Sparkles, Volume2, ChefHat, PawPrint, Globe, Tag,
   AtSign, Link, Mail, BadgeCheck, User, Loader2,
+  BedDouble, Users, Euro, Pause, Play, Trash2, Eye, Plus,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getInitials } from '@/lib/utils'
@@ -97,6 +99,284 @@ function FormSelect({
         </SelectContent>
       </Select>
     </div>
+  )
+}
+
+// ── Tipos para mis anuncios ───────────────────────────────────────────────────
+interface MyListing {
+  id: string
+  title: string
+  city: string
+  neighborhood: string | null
+  monthly_rent: number
+  available_spots: number
+  status: string
+  views_count: number
+  created_at: string
+}
+
+interface MyRoommateListing {
+  id: string
+  title: string
+  city: string
+  neighborhood: string | null
+  max_budget: number
+  status: string
+  views_count: number
+  created_at: string
+}
+
+// ── Componente Mis anuncios ───────────────────────────────────────────────────
+function MisAnuncios({ userId }: { userId: string }) {
+  const navigate = useNavigate()
+  const [listings, setListings] = useState<MyListing[]>([])
+  const [roommates, setRoommates] = useState<MyRoommateListing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true)
+    const [{ data: l }, { data: r }] = await Promise.all([
+      supabase
+        .from('listings')
+        .select('id, title, city, neighborhood, monthly_rent, available_spots, status, views_count, created_at')
+        .eq('owner_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('roommate_listings')
+        .select('id, title, city, neighborhood, max_budget, status, views_count, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+    ])
+    if (l) setListings(l as MyListing[])
+    if (r) setRoommates(r as MyRoommateListing[])
+    setLoading(false)
+  }, [userId])
+
+  useEffect(() => { fetchAll() }, [fetchAll])
+
+  async function toggleListingStatus(id: string, current: string) {
+    const next = current === 'active' ? 'paused' : 'active'
+    setBusy(id)
+    const { error } = await supabase.from('listings').update({ status: next }).eq('id', id)
+    if (!error) {
+      setListings(prev => prev.map(l => l.id === id ? { ...l, status: next } : l))
+      toast.success(next === 'active' ? 'Anuncio activado' : 'Anuncio pausado')
+    } else {
+      toast.error('Error al actualizar el anuncio')
+    }
+    setBusy(null)
+  }
+
+  async function deleteListing(id: string) {
+    if (!window.confirm('¿Seguro que quieres eliminar este anuncio? Esta acción no se puede deshacer.')) return
+    setBusy(id)
+    const { error } = await supabase.from('listings').delete().eq('id', id)
+    if (!error) {
+      setListings(prev => prev.filter(l => l.id !== id))
+      toast.success('Anuncio eliminado')
+    } else {
+      toast.error('Error al eliminar el anuncio')
+    }
+    setBusy(null)
+  }
+
+  async function toggleRoommateStatus(id: string, current: string) {
+    const next = current === 'active' ? 'paused' : 'active'
+    setBusy(id)
+    const { error } = await supabase.from('roommate_listings').update({ status: next }).eq('id', id)
+    if (!error) {
+      setRoommates(prev => prev.map(r => r.id === id ? { ...r, status: next } : r))
+      toast.success(next === 'active' ? 'Anuncio activado' : 'Anuncio pausado')
+    } else {
+      toast.error('Error al actualizar el anuncio')
+    }
+    setBusy(null)
+  }
+
+  async function deleteRoommate(id: string) {
+    if (!window.confirm('¿Seguro que quieres eliminar este anuncio? Esta acción no se puede deshacer.')) return
+    setBusy(id)
+    const { error } = await supabase.from('roommate_listings').delete().eq('id', id)
+    if (!error) {
+      setRoommates(prev => prev.filter(r => r.id !== id))
+      toast.success('Anuncio eliminado')
+    } else {
+      toast.error('Error al eliminar el anuncio')
+    }
+    setBusy(null)
+  }
+
+  const total = listings.length + roommates.length
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Mis anuncios {!loading && total > 0 && `(${total})`}
+          </CardTitle>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => navigate('/publicar')}>
+            <Plus className="h-3.5 w-3.5" />Publicar
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+          </div>
+        ) : total === 0 ? (
+          <div className="text-center py-8 space-y-3">
+            <p className="text-sm text-muted-foreground">No tienes anuncios publicados</p>
+            <Button size="sm" onClick={() => navigate('/publicar')}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />Publicar primer anuncio
+            </Button>
+          </div>
+        ) : (
+          <Tabs defaultValue="habitaciones">
+            <TabsList className="w-full mb-4">
+              <TabsTrigger value="habitaciones" className="flex-1 gap-1.5 text-xs">
+                <BedDouble className="h-3.5 w-3.5" />
+                Habitaciones {listings.length > 0 && `(${listings.length})`}
+              </TabsTrigger>
+              <TabsTrigger value="companeros" className="flex-1 gap-1.5 text-xs">
+                <Users className="h-3.5 w-3.5" />
+                Compañero {roommates.length > 0 && `(${roommates.length})`}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="habitaciones" className="mt-0 space-y-2">
+              {listings.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Sin anuncios de habitación
+                </p>
+              ) : (
+                listings.map(l => (
+                  <div key={l.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <BedDouble className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <button
+                        className="text-sm font-medium truncate hover:underline text-left w-full"
+                        onClick={() => navigate(`/buscar/habitacion/${l.id}`)}
+                      >
+                        {l.title}
+                      </button>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                          <MapPin className="h-2.5 w-2.5" />{[l.neighborhood, l.city].filter(Boolean).join(', ')}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                          <Euro className="h-2.5 w-2.5" />{Number(l.monthly_rent).toLocaleString('es-ES')}€/mes
+                        </span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                          <Eye className="h-2.5 w-2.5" />{l.views_count}
+                        </span>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={l.status === 'active' ? 'default' : 'secondary'}
+                      className="text-[10px] shrink-0"
+                    >
+                      {l.status === 'active' ? 'Activo' : l.status === 'paused' ? 'Pausado' : l.status}
+                    </Badge>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0"
+                      disabled={busy === l.id}
+                      onClick={() => toggleListingStatus(l.id, l.status)}
+                      title={l.status === 'active' ? 'Pausar' : 'Activar'}
+                    >
+                      {l.status === 'active'
+                        ? <Pause className="h-3.5 w-3.5" />
+                        : <Play className="h-3.5 w-3.5" />
+                      }
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      disabled={busy === l.id}
+                      onClick={() => deleteListing(l.id)}
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="companeros" className="mt-0 space-y-2">
+              {roommates.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Sin anuncios de compañero
+                </p>
+              ) : (
+                roommates.map(r => (
+                  <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Users className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <button
+                        className="text-sm font-medium truncate hover:underline text-left w-full"
+                        onClick={() => navigate(`/buscar/companero/${r.id}`)}
+                      >
+                        {r.title}
+                      </button>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                          <MapPin className="h-2.5 w-2.5" />{[r.neighborhood, r.city].filter(Boolean).join(', ')}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                          <Euro className="h-2.5 w-2.5" />{Number(r.max_budget).toLocaleString('es-ES')}€ máx
+                        </span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                          <Eye className="h-2.5 w-2.5" />{r.views_count}
+                        </span>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={r.status === 'active' ? 'default' : 'secondary'}
+                      className="text-[10px] shrink-0"
+                    >
+                      {r.status === 'active' ? 'Activo' : r.status === 'paused' ? 'Pausado' : r.status}
+                    </Badge>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0"
+                      disabled={busy === r.id}
+                      onClick={() => toggleRoommateStatus(r.id, r.status)}
+                      title={r.status === 'active' ? 'Pausar' : 'Activar'}
+                    >
+                      {r.status === 'active'
+                        ? <Pause className="h-3.5 w-3.5" />
+                        : <Play className="h-3.5 w-3.5" />
+                      }
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      disabled={busy === r.id}
+                      onClick={() => deleteRoommate(r.id)}
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -441,6 +721,9 @@ export default function ProfilePage() {
           }
         </CardContent>
       </Card>
+
+      {/* ── Mis anuncios ────────────────────────────────────────────────────── */}
+      <MisAnuncios userId={profile.id} />
 
       {/* ── Cuenta ──────────────────────────────────────────────────────────── */}
       <Card>

@@ -12,6 +12,8 @@ import {
   ArrowLeft, ChevronLeft, ChevronRight, Wifi, Car,
   UtensilsCrossed, Armchair, TreePine, AArrowUp, Home, MessageCircle,
 } from 'lucide-react'
+import { getInitials } from '@/lib/utils'
+import { toast } from 'sonner'
 
 interface ListingDetail {
   id: string
@@ -51,11 +53,6 @@ interface ListingDetail {
     age: number | null
     occupation: string | null
   } | null
-}
-
-function getInitials(name: string | null) {
-  if (!name) return 'KV'
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
 const OCC: Record<string, string> = {
@@ -129,6 +126,8 @@ export default function ListingDetailPage() {
     })
     if (data?.[0]?.conversation_id) {
       navigate(`/chat/${data[0].conversation_id}`)
+    } else {
+      toast.error('No se pudo abrir el chat. Inténtalo de nuevo.')
     }
     setContacting(false)
   }

@@ -11,6 +11,8 @@ import {
   MapPin, Euro, Cigarette, PawPrint, ArrowLeft,
   MessageCircle, Users, CalendarDays, Clock,
 } from 'lucide-react'
+import { getInitials } from '@/lib/utils'
+import { toast } from 'sonner'
 
 interface RoommateDetail {
   id: string
@@ -44,11 +46,6 @@ interface RoommateDetail {
   } | null
 }
 
-function getInitials(name: string | null) {
-  if (!name) return 'KV'
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-}
-
 const OCC: Record<string, string> = {
   estudiante: 'Estudiante', trabajador: 'Trabajador',
   freelance: 'Freelance', autonomo: 'Autónomo', otro: 'Otro',
@@ -76,6 +73,8 @@ export default function RoommateDetailPage() {
     })
     if (data?.[0]?.conversation_id) {
       navigate(`/chat/${data[0].conversation_id}`)
+    } else {
+      toast.error('No se pudo abrir el chat. Inténtalo de nuevo.')
     }
     setContacting(false)
   }
@@ -277,7 +276,7 @@ export default function RoommateDetailPage() {
             className="w-full gap-2"
             size="lg"
             onClick={handleContact}
-            disabled={contacting || detail?.user_id === user?.id}
+            disabled={contacting || !detail?.user_id || detail.user_id === user?.id}
           >
             <MessageCircle className="h-4 w-4" />
             {contacting ? 'Abriendo chat...' : detail?.user_id === user?.id ? 'Tu anuncio' : 'Contactar'}
