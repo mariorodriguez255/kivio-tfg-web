@@ -74,7 +74,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-1">
-            <img src={logo} alt="Kivio" className="h-10 w-10 rounded-xl object-contain" />
+            <img src={logo} alt="Kivio" className="h-10 w-10 rounded-md object-contain" />
             <h1 className="text-4xl font-bold text-primary">kivio</h1>
           </div>
           <p className="text-muted-foreground text-sm">Tu nuevo compañero de piso te espera</p>
@@ -99,7 +99,7 @@ export default function LoginPage() {
               </CardContent>
             ) : (
               <form onSubmit={handleForgotPassword}>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pb-6">
                   <div className="space-y-2">
                     <Label htmlFor="forgot-email">Email de tu cuenta</Label>
                     <Input
@@ -136,7 +136,7 @@ export default function LoginPage() {
             </CardHeader>
 
             <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pb-6">
                 {error && (
                   <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
                     {error}

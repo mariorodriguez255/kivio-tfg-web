@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
@@ -300,7 +299,7 @@ function EmailConfirmationScreen({ email }: { email: string }) {
       <div className="w-full max-w-md text-center">
         <div className="mb-6">
           <div className="flex items-center justify-center gap-3">
-            <img src={logo} alt="Kivio" className="h-10 w-10 rounded-xl object-contain" />
+            <img src={logo} alt="Kivio" className="h-10 w-10 rounded-md object-contain" />
             <h1 className="text-4xl font-bold text-primary">kivio</h1>
           </div>
         </div>
@@ -496,7 +495,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-lg">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-3 mb-1">
-            <img src={logo} alt="Kivio" className="h-10 w-10 rounded-xl object-contain" />
+            <img src={logo} alt="Kivio" className="h-10 w-10 rounded-md object-contain" />
             <h1 className="text-4xl font-bold text-primary">kivio</h1>
           </div>
           <p className="text-muted-foreground text-sm">Encuentra tu compañero ideal</p>
@@ -511,8 +510,7 @@ export default function RegisterPage() {
             <CardDescription>
               {['Crea tu cuenta de Kivio','Cuéntanos quién eres','Tu estilo de vida como compañero','Preséntate a la comunidad','Opcional: conecta tus redes'][step]}
             </CardDescription>
-            <Progress value={progress} className="h-1.5 mt-3" />
-            <div className="flex gap-1 mt-2">
+            <div className="flex gap-1 mt-3">
               {STEPS.map((_, i) => (
                 <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${
                   i < step ? 'bg-primary' : i === step ? 'bg-primary/60' : 'bg-border'
@@ -522,7 +520,7 @@ export default function RegisterPage() {
           </CardHeader>
 
           <form onSubmit={step === STEPS.length - 1 ? handleSubmit : e => { e.preventDefault(); next() }}>
-            <CardContent className="max-h-[58vh] overflow-y-auto pb-2">
+            <CardContent className="max-h-[58vh] overflow-y-auto pb-4">
               {error && (
                 <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md mb-4">
                   {error}
@@ -531,7 +529,7 @@ export default function RegisterPage() {
               {stepComponents[step]}
             </CardContent>
 
-            <div className="flex items-center justify-between px-6 py-4 border-t">
+            <div className="flex items-center justify-between px-4 py-4 border-t">
               {step === 0 ? (
                 <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground">
                   Ya tengo cuenta

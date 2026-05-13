@@ -254,7 +254,7 @@ function ListingFormSteps({
     let listingId: string
 
     if (editId) {
-      const { error } = await supabase.from('listings').update(listingData).eq('id', editId)
+      const { error } = await supabase.from('listing-images').update(listingData).eq('id', editId)
       if (error) {
         setSubmitError('Error al actualizar. Inténtalo de nuevo.')
         setSubmitting(false)
@@ -262,7 +262,7 @@ function ListingFormSteps({
       }
       listingId = editId
     } else {
-      const { data, error } = await supabase.from('listings').insert({
+      const { data, error } = await supabase.from('listing-images').insert({
         ...listingData,
         owner_id: user.id,
         status: 'active',
@@ -281,14 +281,14 @@ function ListingFormSteps({
       const ext = file.name.split('.').pop() ?? 'jpg'
       const path = `${listingId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
       const { error: uploadErr } = await supabase.storage
-        .from('listings')
+        .from('listing-images')
         .upload(path, file, { contentType: file.type })
       if (!uploadErr) {
-        const { data: { publicUrl } } = supabase.storage.from('listings').getPublicUrl(path)
+        const { data: { publicUrl } } = supabase.storage.from('listing-images').getPublicUrl(path)
         finalImages.push(publicUrl)
       }
     }
-    await supabase.from('listings').update({ images: finalImages }).eq('id', listingId)
+    await supabase.from('listing-images').update({ images: finalImages }).eq('id', listingId)
 
     onSuccess(listingId)
   }
@@ -927,7 +927,7 @@ export default function PublishPage() {
     setEditRoommateData(null)
 
     if (tipo === 'habitacion') {
-      supabase.from('listings').select('*').eq('id', editId).single()
+      supabase.from('listing-images').select('*').eq('id', editId).single()
         .then(({ data }) => {
           if (!data || data.owner_id !== user?.id) {
             navigate('/')

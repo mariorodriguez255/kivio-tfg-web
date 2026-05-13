@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Pencil, LogOut, MapPin, Briefcase, Sun, Moon, AlarmClock, Cigarette,
   PartyPopper, Sparkles, Volume2, ChefHat, PawPrint, Globe, Tag,
-  AtSign, Link, Mail, BadgeCheck, User, Loader2,
+  Mail, BadgeCheck, User, Loader2,
   BedDouble, Users, Euro, Pause, Play, Trash2, Eye, Plus, Camera,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -424,8 +424,6 @@ type FormState = {
   pets_friendly: boolean
   interests: string
   languages: string
-  instagram_handle: string
-  linkedin_url: string
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
@@ -483,7 +481,6 @@ export default function ProfilePage() {
     occupation: '', schedule_preference: '', wakeup_time: '', bedtime: '',
     smoker: '', party_lifestyle: '', clean_lifestyle: '', noise_tolerance: '',
     cooking_frequency: '', pets_friendly: false, interests: '', languages: '',
-    instagram_handle: '', linkedin_url: '',
   })
 
   function openEdit() {
@@ -507,8 +504,6 @@ export default function ProfilePage() {
       pets_friendly: profile.pets_friendly ?? false,
       interests: (profile.interests ?? []).join(', '),
       languages: (profile.languages ?? []).join(', '),
-      instagram_handle: profile.instagram_handle ?? '',
-      linkedin_url: profile.linkedin_url ?? '',
     })
     setSheetOpen(true)
   }
@@ -517,10 +512,6 @@ export default function ProfilePage() {
     if (!profile) return
     if (form.full_name && !form.full_name.trim()) {
       toast.error('El nombre no puede estar vacío')
-      return
-    }
-    if (form.linkedin_url && !form.linkedin_url.startsWith('https://')) {
-      toast.error('La URL de LinkedIn debe comenzar con https://')
       return
     }
     setSaving(true)
@@ -546,8 +537,6 @@ export default function ProfilePage() {
         pets_friendly: form.pets_friendly,
         interests: form.interests.split(',').map(s => s.trim()).filter(Boolean),
         languages: form.languages.split(',').map(s => s.trim()).filter(Boolean),
-        instagram_handle: form.instagram_handle || null,
-        linkedin_url: form.linkedin_url || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', profile.id)
@@ -794,41 +783,6 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* ── Redes sociales ──────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Redes sociales
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {profile.instagram_handle
-            ? <div className="flex items-center gap-2.5">
-                <AtSign className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm">@{profile.instagram_handle}</span>
-              </div>
-            : <div className="flex items-center gap-2.5">
-                <AtSign className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                <button onClick={openEdit} className="text-xs text-primary hover:underline">
-                  + Conecta tu Instagram
-                </button>
-              </div>
-          }
-          {profile.linkedin_url
-            ? <div className="flex items-center gap-2.5">
-                <Link className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm truncate">{profile.linkedin_url}</span>
-              </div>
-            : <div className="flex items-center gap-2.5">
-                <Link className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                <button onClick={openEdit} className="text-xs text-primary hover:underline">
-                  + Conecta tu LinkedIn
-                </button>
-              </div>
-          }
-        </CardContent>
-      </Card>
-
       {/* ── Mis anuncios ────────────────────────────────────────────────────── */}
       <MisAnuncios userId={profile.id} />
 
@@ -865,11 +819,10 @@ export default function ProfilePage() {
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <Tabs defaultValue="basico">
-              <TabsList className="grid w-full grid-cols-4 mb-4">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
                 <TabsTrigger value="basico">Básico</TabsTrigger>
                 <TabsTrigger value="lifestyle">Lifestyle</TabsTrigger>
                 <TabsTrigger value="intereses">Intereses</TabsTrigger>
-                <TabsTrigger value="redes">Redes</TabsTrigger>
               </TabsList>
 
               {/* ── Tab: Básico ──────────────────────────────────────────── */}
@@ -1092,36 +1045,6 @@ export default function ProfilePage() {
                 )}
               </TabsContent>
 
-              {/* ── Tab: Redes ───────────────────────────────────────────── */}
-              <TabsContent value="redes" className="space-y-4 mt-0">
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1.5">
-                    <AtSign className="h-4 w-4" /> Instagram
-                  </Label>
-                  <div className="flex">
-                    <span className="inline-flex items-center px-3 text-sm text-muted-foreground border border-r-0 rounded-l-md bg-muted">
-                      @
-                    </span>
-                    <Input
-                      value={form.instagram_handle}
-                      onChange={e => setForm({ ...form, instagram_handle: e.target.value })}
-                      placeholder="tu_usuario"
-                      className="rounded-l-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1.5">
-                    <Link className="h-4 w-4" /> LinkedIn
-                  </Label>
-                  <Input
-                    value={form.linkedin_url}
-                    onChange={e => setForm({ ...form, linkedin_url: e.target.value })}
-                    placeholder="linkedin.com/in/tu-perfil"
-                  />
-                </div>
-              </TabsContent>
             </Tabs>
           </div>
 
