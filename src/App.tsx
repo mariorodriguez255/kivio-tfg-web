@@ -6,6 +6,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'))
+const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'))
 const HomePage = lazy(() => import('@/pages/home/HomePage'))
 const SearchPage = lazy(() => import('@/pages/search/SearchPage'))
 const ListingDetailPage = lazy(() => import('@/pages/search/ListingDetailPage'))
@@ -42,6 +43,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route index element={<HomePage />} />

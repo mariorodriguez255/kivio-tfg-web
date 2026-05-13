@@ -254,7 +254,7 @@ function ListingFormSteps({
     let listingId: string
 
     if (editId) {
-      const { error } = await supabase.from('listing-images').update(listingData).eq('id', editId)
+      const { error } = await supabase.from('listings').update(listingData).eq('id', editId)
       if (error) {
         setSubmitError('Error al actualizar. Inténtalo de nuevo.')
         setSubmitting(false)
@@ -262,7 +262,7 @@ function ListingFormSteps({
       }
       listingId = editId
     } else {
-      const { data, error } = await supabase.from('listing-images').insert({
+      const { data, error } = await supabase.from('listings').insert({
         ...listingData,
         owner_id: user.id,
         status: 'active',
@@ -288,7 +288,7 @@ function ListingFormSteps({
         finalImages.push(publicUrl)
       }
     }
-    await supabase.from('listing-images').update({ images: finalImages }).eq('id', listingId)
+    await supabase.from('listings').update({ images: finalImages }).eq('id', listingId)
 
     onSuccess(listingId)
   }
@@ -927,7 +927,7 @@ export default function PublishPage() {
     setEditRoommateData(null)
 
     if (tipo === 'habitacion') {
-      supabase.from('listing-images').select('*').eq('id', editId).single()
+      supabase.from('listings').select('*').eq('id', editId).single()
         .then(({ data }) => {
           if (!data || data.owner_id !== user?.id) {
             navigate('/')
