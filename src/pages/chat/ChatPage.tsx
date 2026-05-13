@@ -6,10 +6,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
-import { Send, MessageCircle, ArrowLeft, MapPin } from 'lucide-react'
+import { cn, getInitials } from '@/lib/utils'
+import { Send, MessageCircle, ArrowLeft, MapPin, Search } from 'lucide-react'
 import { toast } from 'sonner'
-import { getInitials } from '@/lib/utils'
 
 // ── tipos ─────────────────────────────────────────────────────────────────────
 interface Conversation {
@@ -115,7 +114,7 @@ function ConvItem({
           <p className={cn('text-sm truncate', conv.unread_count > 0 ? 'font-semibold' : 'font-medium')}>
             {conv.participant.full_name ?? 'Usuario'}
           </p>
-          <span className="text-[10px] text-muted-foreground shrink-0">{formatTime(conv.last_message_at)}</span>
+          <span className="text-xs text-muted-foreground shrink-0">{formatTime(conv.last_message_at)}</span>
         </div>
         <p className={cn(
           'text-xs truncate mt-0.5',
@@ -124,7 +123,7 @@ function ConvItem({
           {preview}
         </p>
         {conv.listing_info && (
-          <p className="text-[10px] text-muted-foreground truncate flex items-center gap-0.5 mt-0.5">
+          <p className="text-xs text-muted-foreground truncate flex items-center gap-0.5 mt-0.5">
             <MapPin className="h-2.5 w-2.5 shrink-0" />
             {conv.listing_info.title}
           </p>
@@ -167,7 +166,7 @@ function MessageBubble({ msg, isOwn }: { msg: Message; isOwn: boolean }) {
           {msg.content}
         </div>
         <p className={cn(
-          'text-[10px] text-muted-foreground mt-0.5 px-1',
+          'text-xs text-muted-foreground mt-0.5 px-1',
           isOwn ? 'text-right' : 'text-left',
         )}>
           {formatMsgTime(msg.created_at)}
@@ -181,14 +180,19 @@ function MessageBubble({ msg, isOwn }: { msg: Message; isOwn: boolean }) {
 // ── estado vacío ──────────────────────────────────────────────────────────────
 function EmptyState() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8 border-l">
-      <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
-        <MessageCircle className="h-7 w-7 text-muted-foreground/40" />
+    <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center p-8 border-l bg-muted/20">
+      <div className="relative">
+        <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+          <MessageCircle className="h-8 w-8 text-primary/50" />
+        </div>
+        <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+          <span className="text-[10px]">💬</span>
+        </div>
       </div>
-      <div>
-        <p className="font-medium">Tus mensajes</p>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Selecciona una conversación para empezar
+      <div className="space-y-1 max-w-xs">
+        <p className="font-semibold">Tus mensajes</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Selecciona una conversación de la izquierda para empezar a chatear
         </p>
       </div>
     </div>
@@ -203,12 +207,14 @@ export default function ChatPage() {
 
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loadingConvs, setLoadingConvs] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [loadingMsgs, setLoadingMsgs] = useState(false)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
 
   const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const seenIds = useRef(new Set<string>())
   // Ref estable para activeConv accesible desde closures de realtime
@@ -336,16 +342,26 @@ export default function ChatPage() {
           )
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          toast.error('Se perdió la conexión del chat. Recarga la página si no recibes mensajes.')
+        }
+      })
 
     return () => { supabase.removeChannel(ch) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, user?.id])
 
-  // Auto-scroll al fondo cuando llegan mensajes
+  // Auto-scroll al fondo solo si el usuario ya estaba cerca del final
   useEffect(() => {
     if (messages.length === 0) return
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const container = messagesContainerRef.current
+    if (!container) return
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    // Si está a menos de 150px del final (o es carga inicial), hace scroll
+    if (distanceFromBottom < 150) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
 
   // Focus en el input al cambiar de conversación
@@ -414,8 +430,19 @@ export default function ChatPage() {
         'w-full md:w-80 md:shrink-0',
         conversationId ? 'hidden md:flex' : 'flex',
       )}>
-        <div className="shrink-0 h-14 flex items-center px-4 border-b">
-          <h2 className="font-semibold">Mensajes</h2>
+        <div className="shrink-0 border-b">
+          <div className="h-14 flex items-center px-4">
+            <h2 className="font-semibold">Mensajes</h2>
+          </div>
+          <div className="px-3 pb-3 relative">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar conversación..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-sm"
+            />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -442,7 +469,9 @@ export default function ChatPage() {
               </div>
             </div>
           ) : (
-            conversations.map(conv => (
+            conversations
+            .filter(conv => !searchQuery.trim() || conv.participant.full_name?.toLowerCase().includes(searchQuery.toLowerCase()))
+            .map(conv => (
               <ConvItem
                 key={conv.id}
                 conv={conv}
@@ -501,7 +530,7 @@ export default function ChatPage() {
           </div>
 
           {/* Lista de mensajes */}
-          <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4">
             {loadingMsgs ? (
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (

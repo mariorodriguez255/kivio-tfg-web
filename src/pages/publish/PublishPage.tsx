@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -9,15 +9,17 @@ import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
   BedDouble, Users, ChevronRight, ChevronLeft, CheckCircle2,
   Wifi, Car, UtensilsCrossed, Armchair, TreePine, AArrowUp, Sofa,
-  Euro, Cigarette, PawPrint, Music,
+  Euro, Cigarette, PawPrint, Music, ImagePlus, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 // ── tipos ─────────────────────────────────────────────────────────────────────
 interface ListingForm {
@@ -124,22 +126,66 @@ function Field({
 
 // ── formulario habitación ─────────────────────────────────────────────────────
 function ListingFormSteps({
+  editId,
+  initialData,
+  initialImages,
   onSuccess,
 }: {
+  editId?: string | null
+  initialData?: ListingForm
+  initialImages?: string[]
   onSuccess: (id: string) => void
 }) {
   const { user } = useAuth()
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState<ListingForm>(LISTING_INIT)
+  const [form, setForm] = useState<ListingForm>(() => initialData ?? LISTING_INIT)
   const [errors, setErrors] = useState<Partial<Record<keyof ListingForm, string>>>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+
+  // Image state
+  const [existingImages, setExistingImages] = useState<string[]>(() => initialImages ?? [])
+  const [newFiles, setNewFiles] = useState<File[]>([])
+  const [newPreviews, setNewPreviews] = useState<string[]>([])
+  const imgInputRef = useRef<HTMLInputElement>(null)
 
   const TOTAL_STEPS = 4
 
   function set<K extends keyof ListingForm>(key: K, value: ListingForm[K]) {
     setForm(f => ({ ...f, [key]: value }))
     setErrors(e => ({ ...e, [key]: undefined }))
+  }
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    let hasMimeError = false
+    let hasSizeError = false
+    const valid = files.filter(f => {
+      if (!ALLOWED.includes(f.type)) { hasMimeError = true; return false }
+      if (f.size > 10 * 1024 * 1024) { hasSizeError = true; return false }
+      return true
+    })
+    if (hasMimeError) toast.error('Solo se permiten imágenes JPG, PNG, WebP o GIF')
+    if (hasSizeError) toast.error('Algunas imágenes superan 10 MB y se han descartado')
+    const total = existingImages.length + newFiles.length + valid.length
+    if (total > 10) { toast.error('Máximo 10 imágenes en total'); return }
+    setNewFiles(prev => [...prev, ...valid])
+    valid.forEach(f => {
+      const url = URL.createObjectURL(f)
+      setNewPreviews(prev => [...prev, url])
+    })
+    if (imgInputRef.current) imgInputRef.current.value = ''
+  }
+
+  function removeExistingImage(idx: number) {
+    setExistingImages(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  function removeNewImage(idx: number) {
+    URL.revokeObjectURL(newPreviews[idx])
+    setNewFiles(prev => prev.filter((_, i) => i !== idx))
+    setNewPreviews(prev => prev.filter((_, i) => i !== idx))
   }
 
   function validate(): boolean {
@@ -175,8 +221,8 @@ function ListingFormSteps({
     if (!validate() || !user) return
     setSubmitting(true)
     setSubmitError('')
-    const { data, error } = await supabase.from('listings').insert({
-      owner_id: user.id,
+
+    const listingData = {
       title: form.title.trim(),
       description: form.description.trim(),
       city: form.city.trim(),
@@ -203,15 +249,48 @@ function ListingFormSteps({
       pets_allowed: form.pets_allowed,
       party_lifestyle_ok: form.party_lifestyle_ok,
       house_rules: form.house_rules.trim() || null,
-      status: 'active',
-    }).select('id').single()
-
-    if (error || !data) {
-      setSubmitError('Error al publicar. Inténtalo de nuevo.')
-      setSubmitting(false)
-      return
     }
-    onSuccess(data.id)
+
+    let listingId: string
+
+    if (editId) {
+      const { error } = await supabase.from('listings').update(listingData).eq('id', editId)
+      if (error) {
+        setSubmitError('Error al actualizar. Inténtalo de nuevo.')
+        setSubmitting(false)
+        return
+      }
+      listingId = editId
+    } else {
+      const { data, error } = await supabase.from('listings').insert({
+        ...listingData,
+        owner_id: user.id,
+        status: 'active',
+      }).select('id').single()
+      if (error || !data) {
+        setSubmitError('Error al publicar. Inténtalo de nuevo.')
+        setSubmitting(false)
+        return
+      }
+      listingId = data.id
+    }
+
+    // Upload new images and update the images array
+    let finalImages = [...existingImages]
+    for (const file of newFiles) {
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `${listingId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadErr } = await supabase.storage
+        .from('listings')
+        .upload(path, file, { contentType: file.type })
+      if (!uploadErr) {
+        const { data: { publicUrl } } = supabase.storage.from('listings').getPublicUrl(path)
+        finalImages.push(publicUrl)
+      }
+    }
+    await supabase.from('listings').update({ images: finalImages }).eq('id', listingId)
+
+    onSuccess(listingId)
   }
 
   return (
@@ -222,12 +301,12 @@ function ListingFormSteps({
           <span>Paso {step} de {TOTAL_STEPS}</span>
           <span>{Math.round((step / TOTAL_STEPS) * 100)}%</span>
         </div>
-        <Progress value={(step / TOTAL_STEPS) * 100} className="h-1.5" />
+        <Progress value={(step / TOTAL_STEPS) * 100} className="h-2" />
       </div>
 
       {/* Paso 1: Básico */}
       {step === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <StepHeader title="Lo básico" desc="Cuéntanos sobre la habitación que ofreces" />
           <Field label="Título del anuncio" required error={errors.title}>
             <Input
@@ -258,12 +337,62 @@ function ListingFormSteps({
           <Field label="Dirección">
             <Input placeholder="Calle Mayor, 12 (no se muestra exacta)" value={form.address} onChange={e => set('address', e.target.value)} />
           </Field>
+
+          {/* Fotos */}
+          <div className="space-y-2">
+            <Label className="text-sm">Fotos</Label>
+            <div className="flex flex-wrap gap-2">
+              {existingImages.map((src, i) => (
+                <div key={`ex-${i}`} className="relative h-24 w-24 rounded-lg overflow-hidden border bg-muted shrink-0">
+                  <img src={src} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeExistingImage(i)}
+                    className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {newPreviews.map((src, i) => (
+                <div key={`nw-${i}`} className="relative h-24 w-24 rounded-lg overflow-hidden border bg-muted shrink-0">
+                  <img src={src} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeNewImage(i)}
+                    className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {existingImages.length + newFiles.length < 10 && (
+                <button
+                  type="button"
+                  onClick={() => imgInputRef.current?.click()}
+                  className="h-24 w-24 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors shrink-0"
+                >
+                  <ImagePlus className="h-5 w-5" />
+                  <span className="text-xs">Añadir</span>
+                </button>
+              )}
+              <input
+                ref={imgInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">{existingImages.length + newFiles.length}/10 fotos</p>
+          </div>
         </div>
       )}
 
       {/* Paso 2: El piso */}
       {step === 2 && (
-        <div className="space-y-5">
+        <div className="space-y-5 animate-fade-in">
           <StepHeader title="El piso" desc="Detalles y características del inmueble" />
           <div className="grid grid-cols-3 gap-3">
             <Field label="Habitaciones totales" required error={errors.total_rooms}>
@@ -305,7 +434,7 @@ function ListingFormSteps({
 
       {/* Paso 3: Precio */}
       {step === 3 && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <StepHeader title="Precio" desc="¿Cuánto cuesta vivir aquí?" />
           <Field label="Alquiler mensual (€)" required error={errors.monthly_rent}>
             <div className="relative">
@@ -349,7 +478,7 @@ function ListingFormSteps({
 
       {/* Paso 4: Preferencias */}
       {step === 4 && (
-        <div className="space-y-5">
+        <div className="space-y-5 animate-fade-in">
           <StepHeader title="Preferencias" desc="¿Qué perfil de inquilino buscas?" />
 
           <div className="space-y-2">
@@ -410,17 +539,20 @@ function ListingFormSteps({
       {/* Navegación */}
       <div className="flex gap-3 pt-2">
         {step > 1 && (
-          <Button variant="outline" onClick={() => setStep(s => s - 1)} className="flex-1">
+          <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={submitting} className="flex-1">
             <ChevronLeft className="h-4 w-4 mr-1" />Atrás
           </Button>
         )}
         {step < TOTAL_STEPS ? (
-          <Button onClick={next} className="flex-1">
+          <Button onClick={next} disabled={submitting} className="flex-1">
             Siguiente<ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
           <Button onClick={submit} disabled={submitting} className="flex-1">
-            {submitting ? 'Publicando...' : 'Publicar habitación'}
+            {submitting
+              ? (editId ? 'Guardando...' : 'Publicando...')
+              : (editId ? 'Guardar cambios' : 'Publicar habitación')
+            }
           </Button>
         )}
       </div>
@@ -430,13 +562,17 @@ function ListingFormSteps({
 
 // ── formulario compañero ──────────────────────────────────────────────────────
 function RoommateFormSteps({
+  editId,
+  initialData,
   onSuccess,
 }: {
+  editId?: string | null
+  initialData?: RoommateForm
   onSuccess: (id: string) => void
 }) {
   const { user } = useAuth()
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState<RoommateForm>(ROOMMATE_INIT)
+  const [form, setForm] = useState<RoommateForm>(() => initialData ?? ROOMMATE_INIT)
   const [errors, setErrors] = useState<Partial<Record<keyof RoommateForm, string>>>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -460,6 +596,10 @@ function RoommateFormSteps({
       if (form.min_stay_months && Number(form.min_stay_months) < 1)
         e.min_stay_months = 'Mínimo 1 mes'
     }
+    if (step === 3) {
+      if (form.preferred_age_min && form.preferred_age_max && Number(form.preferred_age_min) > Number(form.preferred_age_max))
+        e.preferred_age_min = 'La edad mínima no puede superar la máxima'
+    }
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -472,8 +612,8 @@ function RoommateFormSteps({
     if (!validate() || !user) return
     setSubmitting(true)
     setSubmitError('')
-    const { data, error } = await supabase.from('roommate_listings').insert({
-      user_id: user.id,
+
+    const roommateData = {
       title: form.title.trim(),
       description: form.description.trim(),
       city: form.city.trim(),
@@ -492,15 +632,29 @@ function RoommateFormSteps({
       clean_lifestyle_ok: form.clean_lifestyle_ok || null,
       noise_tolerance_ok: form.noise_tolerance_ok || null,
       additional_info: form.additional_info.trim() || null,
-      status: 'active',
-    }).select('id').single()
-
-    if (error || !data) {
-      setSubmitError('Error al publicar. Inténtalo de nuevo.')
-      setSubmitting(false)
-      return
     }
-    onSuccess(data.id)
+
+    if (editId) {
+      const { error } = await supabase.from('roommate_listings').update(roommateData).eq('id', editId)
+      if (error) {
+        setSubmitError('Error al actualizar. Inténtalo de nuevo.')
+        setSubmitting(false)
+        return
+      }
+      onSuccess(editId)
+    } else {
+      const { data, error } = await supabase.from('roommate_listings').insert({
+        ...roommateData,
+        user_id: user.id,
+        status: 'active',
+      }).select('id').single()
+      if (error || !data) {
+        setSubmitError('Error al publicar. Inténtalo de nuevo.')
+        setSubmitting(false)
+        return
+      }
+      onSuccess(data.id)
+    }
   }
 
   return (
@@ -511,12 +665,12 @@ function RoommateFormSteps({
           <span>Paso {step} de {TOTAL_STEPS}</span>
           <span>{Math.round((step / TOTAL_STEPS) * 100)}%</span>
         </div>
-        <Progress value={(step / TOTAL_STEPS) * 100} className="h-1.5" />
+        <Progress value={(step / TOTAL_STEPS) * 100} className="h-2" />
       </div>
 
       {/* Paso 1: Básico */}
       {step === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <StepHeader title="Tu anuncio" desc="Preséntate y explica qué estás buscando" />
           <Field label="Título del anuncio" required error={errors.title}>
             <Input
@@ -549,7 +703,7 @@ function RoommateFormSteps({
 
       {/* Paso 2: Presupuesto y disponibilidad */}
       {step === 2 && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <StepHeader title="Presupuesto" desc="¿Cuánto puedes pagar y cuándo puedes entrar?" />
 
           <Field label="Presupuesto máximo (€/mes)" required error={errors.max_budget}>
@@ -588,7 +742,7 @@ function RoommateFormSteps({
 
       {/* Paso 3: Convivencia */}
       {step === 3 && (
-        <div className="space-y-5">
+        <div className="space-y-5 animate-fade-in">
           <StepHeader title="Convivencia" desc="¿Qué tipo de compañeros/as buscas?" />
 
           <div className="space-y-2">
@@ -603,7 +757,7 @@ function RoommateFormSteps({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Edad mínima">
+            <Field label="Edad mínima" error={errors.preferred_age_min}>
               <Input type="number" min={18} max={99} placeholder="18"
                 value={form.preferred_age_min} onChange={e => set('preferred_age_min', e.target.value)} />
             </Field>
@@ -679,17 +833,20 @@ function RoommateFormSteps({
       {/* Navegación */}
       <div className="flex gap-3 pt-2">
         {step > 1 && (
-          <Button variant="outline" onClick={() => setStep(s => s - 1)} className="flex-1">
+          <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={submitting} className="flex-1">
             <ChevronLeft className="h-4 w-4 mr-1" />Atrás
           </Button>
         )}
         {step < TOTAL_STEPS ? (
-          <Button onClick={next} className="flex-1">
+          <Button onClick={next} disabled={submitting} className="flex-1">
             Siguiente<ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
           <Button onClick={submit} disabled={submitting} className="flex-1">
-            {submitting ? 'Publicando...' : 'Publicar anuncio'}
+            {submitting
+              ? (editId ? 'Guardando...' : 'Publicando...')
+              : (editId ? 'Guardar cambios' : 'Publicar anuncio')
+            }
           </Button>
         )}
       </div>
@@ -699,22 +856,28 @@ function RoommateFormSteps({
 
 // ── pantalla de éxito ─────────────────────────────────────────────────────────
 function SuccessScreen({
-  tipo, id, onNew,
+  tipo, id, onNew, isEdit,
 }: {
   tipo: 'habitacion' | 'companero'
   id: string
   onNew: () => void
+  isEdit?: boolean
 }) {
   const navigate = useNavigate()
   return (
-    <div className="flex flex-col items-center text-center py-12 gap-5">
-      <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+    <div className="flex flex-col items-center text-center py-12 gap-5 animate-slide-up">
+      <div className="h-16 w-16 rounded-full bg-green-100 shadow-md flex items-center justify-center">
         <CheckCircle2 className="h-8 w-8 text-green-600" />
       </div>
       <div>
-        <h2 className="text-lg font-bold">¡Publicado con éxito!</h2>
+        <h2 className="text-lg font-bold">
+          {isEdit ? '¡Cambios guardados!' : '¡Publicado con éxito!'}
+        </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Tu anuncio ya está visible para otros usuarios
+          {isEdit
+            ? 'Tu anuncio ha sido actualizado correctamente'
+            : 'Tu anuncio ya está visible para otros usuarios'
+          }
         </p>
       </div>
       <div className="flex flex-col gap-2 w-full max-w-xs">
@@ -723,9 +886,15 @@ function SuccessScreen({
         >
           Ver mi anuncio
         </Button>
-        <Button variant="outline" onClick={onNew}>
-          Publicar otro anuncio
-        </Button>
+        {isEdit ? (
+          <Button variant="outline" onClick={() => navigate('/perfil')}>
+            Volver a mi perfil
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={onNew}>
+            Publicar otro anuncio
+          </Button>
+        )}
         <Button variant="ghost" onClick={() => navigate('/buscar')}>
           Ir a buscar
         </Button>
@@ -736,10 +905,96 @@ function SuccessScreen({
 
 // ── página principal ───────────────────────────────────────────────────────────
 export default function PublishPage() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const tipo = searchParams.get('tipo') === 'companero' ? 'companero' : 'habitacion'
+  const editId = searchParams.get('editId') || null
+
   const [successId, setSuccessId] = useState<string | null>(null)
   const [formKey, setFormKey] = useState(0)
+
+  // Edit mode state
+  const [loadingEdit, setLoadingEdit] = useState(false)
+  const [editListingData, setEditListingData] = useState<ListingForm | null>(null)
+  const [editListingImages, setEditListingImages] = useState<string[]>([])
+  const [editRoommateData, setEditRoommateData] = useState<RoommateForm | null>(null)
+
+  useEffect(() => {
+    if (!editId) return
+    setLoadingEdit(true)
+    setEditListingData(null)
+    setEditRoommateData(null)
+
+    if (tipo === 'habitacion') {
+      supabase.from('listings').select('*').eq('id', editId).single()
+        .then(({ data }) => {
+          if (!data || data.owner_id !== user?.id) {
+            navigate('/')
+            return
+          }
+          setEditListingData({
+              title: data.title ?? '',
+              description: data.description ?? '',
+              city: data.city ?? '',
+              neighborhood: data.neighborhood ?? '',
+              address: data.address ?? '',
+              total_rooms: data.total_rooms?.toString() ?? '',
+              available_spots: data.available_spots?.toString() ?? '',
+              bathrooms: data.bathrooms?.toString() ?? '',
+              furnished: data.furnished ?? false,
+              has_kitchen: data.has_kitchen ?? true,
+              has_living_room: data.has_living_room ?? true,
+              has_parking: data.has_parking ?? false,
+              has_elevator: data.has_elevator ?? false,
+              has_balcony: data.has_balcony ?? false,
+              has_wifi: data.has_wifi ?? true,
+              monthly_rent: data.monthly_rent?.toString() ?? '',
+              deposit: data.deposit?.toString() ?? '',
+              bills_included: data.bills_included ?? false,
+              estimated_bills: data.estimated_bills?.toString() ?? '',
+              gender_preference: data.gender_preference ?? 'cualquiera',
+              age_min: data.age_min?.toString() ?? '',
+              age_max: data.age_max?.toString() ?? '',
+              smoker_allowed: data.smoker_allowed ?? true,
+              pets_allowed: data.pets_allowed ?? false,
+              party_lifestyle_ok: data.party_lifestyle_ok ?? true,
+              house_rules: data.house_rules ?? '',
+            })
+          setEditListingImages((data.images as string[] | null) ?? [])
+          setLoadingEdit(false)
+        })
+    } else {
+      supabase.from('roommate_listings').select('*').eq('id', editId).single()
+        .then(({ data }) => {
+          if (!data || data.user_id !== user?.id) {
+            navigate('/')
+            return
+          }
+          setEditRoommateData({
+              title: data.title ?? '',
+              description: data.description ?? '',
+              city: data.city ?? '',
+              neighborhood: data.neighborhood ?? '',
+              max_budget: data.max_budget?.toString() ?? '',
+              expenses_included: data.expenses_included ?? false,
+              move_in_date: data.move_in_date ?? '',
+              min_stay_months: data.min_stay_months?.toString() ?? '',
+              preferred_gender: data.preferred_gender ?? 'cualquiera',
+              preferred_age_min: data.preferred_age_min?.toString() ?? '',
+              preferred_age_max: data.preferred_age_max?.toString() ?? '',
+              smoker_ok: data.smoker_ok ?? true,
+              pets_ok: data.pets_ok ?? true,
+              party_lifestyle_ok: data.party_lifestyle_ok ?? true,
+              cooking_shared: data.cooking_shared ?? false,
+              clean_lifestyle_ok: data.clean_lifestyle_ok ?? '',
+              noise_tolerance_ok: data.noise_tolerance_ok ?? '',
+              additional_info: data.additional_info ?? '',
+            })
+          setLoadingEdit(false)
+        })
+    }
+  }, [editId, tipo])
 
   function switchTipo(value: string) {
     setSearchParams(value === 'companero' ? { tipo: 'companero' } : { tipo: 'habitacion' })
@@ -759,38 +1014,67 @@ export default function PublishPage() {
   if (successId) {
     return (
       <div className="max-w-lg mx-auto">
-        <SuccessScreen tipo={tipo} id={successId} onNew={handleNew} />
+        <SuccessScreen tipo={tipo} id={successId} onNew={handleNew} isEdit={!!editId} />
       </div>
     )
   }
+
+  // While loading edit data, show skeleton
+  const showEditLoading = editId && loadingEdit
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
 
       {/* Cabecera */}
       <div>
-        <h1 className="text-xl font-bold">Publicar</h1>
-        <p className="text-sm text-muted-foreground">¿Qué quieres publicar?</p>
+        <h1 className="text-xl font-bold">{editId ? 'Editar anuncio' : 'Publicar'}</h1>
+        <p className="text-sm text-muted-foreground">
+          {editId ? 'Modifica los datos de tu anuncio' : '¿Qué quieres publicar?'}
+        </p>
       </div>
 
-      {/* Tipo de anuncio */}
-      <Tabs value={tipo} onValueChange={switchTipo}>
-        <TabsList className="w-full">
-          <TabsTrigger value="habitacion" className="flex-1 gap-1.5">
-            <BedDouble className="h-3.5 w-3.5" />Habitación
-          </TabsTrigger>
-          <TabsTrigger value="companero" className="flex-1 gap-1.5">
-            <Users className="h-3.5 w-3.5" />Busco compañero
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Tipo de anuncio — solo visible en modo creación */}
+      {!editId && (
+        <Tabs value={tipo} onValueChange={switchTipo}>
+          <TabsList className="w-full">
+            <TabsTrigger value="habitacion" className="flex-1 gap-1.5">
+              <BedDouble className="h-3.5 w-3.5" />Habitación
+            </TabsTrigger>
+            <TabsTrigger value="companero" className="flex-1 gap-1.5">
+              <Users className="h-3.5 w-3.5" />Busco compañero
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
       {/* Formulario */}
       <div className="border rounded-xl p-5 bg-card">
-        {tipo === 'habitacion' ? (
-          <ListingFormSteps key={`listing-${formKey}`} onSuccess={handleSuccess} />
+        {showEditLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-1.5 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </div>
+        ) : tipo === 'habitacion' ? (
+          <ListingFormSteps
+            key={`listing-${formKey}-${editId ?? 'new'}`}
+            editId={editId}
+            initialData={editId ? (editListingData ?? undefined) : undefined}
+            initialImages={editId ? editListingImages : undefined}
+            onSuccess={handleSuccess}
+          />
         ) : (
-          <RoommateFormSteps key={`roommate-${formKey}`} onSuccess={handleSuccess} />
+          <RoommateFormSteps
+            key={`roommate-${formKey}-${editId ?? 'new'}`}
+            editId={editId}
+            initialData={editId ? (editRoommateData ?? undefined) : undefined}
+            onSuccess={handleSuccess}
+          />
         )}
       </div>
     </div>

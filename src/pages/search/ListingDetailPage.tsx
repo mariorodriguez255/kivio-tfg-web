@@ -14,9 +14,11 @@ import {
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 import { toast } from 'sonner'
+import { OCCUPATION as OCC } from '@/lib/translations'
 
 interface ListingDetail {
   id: string
+  status: string
   title: string
   description: string
   city: string
@@ -55,53 +57,62 @@ interface ListingDetail {
   } | null
 }
 
-const OCC: Record<string, string> = {
-  estudiante: 'Estudiante', trabajador: 'Trabajador',
-  freelance: 'Freelance', autonomo: 'Autónomo', otro: 'Otro',
-}
-
 function ImageGallery({ images }: { images: string[] | null }) {
   const [idx, setIdx] = useState(0)
   const imgs = images?.filter(Boolean) ?? []
 
   if (imgs.length === 0) {
     return (
-      <div className="w-full h-72 bg-muted rounded-xl flex items-center justify-center">
+      <div className="w-full h-72 bg-gradient-to-br from-muted to-accent/30 rounded-xl flex items-center justify-center">
         <BedDouble className="h-12 w-12 text-muted-foreground/20" />
       </div>
     )
   }
 
   return (
-    <div className="relative w-full h-72 bg-muted rounded-xl overflow-hidden">
-      <img src={imgs[idx]} alt="" className="absolute inset-0 w-full h-full object-cover" />
+    <div className="space-y-2">
+      <div className="relative w-full h-72 bg-muted rounded-xl overflow-hidden">
+        <img
+          key={idx}
+          src={imgs[idx]}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover animate-fade-in"
+          onError={e => { e.currentTarget.src = ''; e.currentTarget.style.display = 'none' }}
+        />
+        {imgs.length > 1 && (
+          <>
+            <button
+              onClick={() => setIdx(i => (i - 1 + imgs.length) % imgs.length)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setIdx(i => (i + 1) % imgs.length)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            <span className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+              {idx + 1}/{imgs.length}
+            </span>
+          </>
+        )}
+      </div>
       {imgs.length > 1 && (
-        <>
-          <button
-            onClick={() => setIdx(i => (i - 1 + imgs.length) % imgs.length)}
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => setIdx(i => (i + 1) % imgs.length)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-            {imgs.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setIdx(i)}
-                className={`h-1.5 rounded-full transition-all ${i === idx ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}
-              />
-            ))}
-          </div>
-          <span className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
-            {idx + 1}/{imgs.length}
-          </span>
-        </>
+        <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' } as React.CSSProperties}>
+          {imgs.map((src, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              className={`relative h-16 w-24 shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
+                i === idx ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100'
+              }`}
+            >
+              <img src={src} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -141,7 +152,8 @@ export default function ListingDetailPage() {
       .single()
       .then(({ data, error }) => {
         if (error || !data) { setNotFound(true) }
-        else { setDetail(data as unknown as ListingDetail) }
+        else if (data.status !== 'active') { setNotFound(true) }
+        else { setDetail(data as ListingDetail) }
         setLoading(false)
       })
 
@@ -150,9 +162,14 @@ export default function ListingDetailPage() {
 
   if (notFound && !loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <BedDouble className="h-10 w-10 text-muted-foreground/30" />
-        <p className="text-muted-foreground">Habitación no encontrada</p>
+      <div className="flex flex-col items-center justify-center py-24 gap-4 animate-slide-up">
+        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-muted to-accent/30 flex items-center justify-center">
+          <BedDouble className="h-8 w-8 text-muted-foreground/40" />
+        </div>
+        <div className="text-center">
+          <p className="font-semibold">Habitación no encontrada</p>
+          <p className="text-sm text-muted-foreground mt-1">Puede que haya sido eliminada o pausada</p>
+        </div>
         <Button variant="outline" onClick={() => navigate('/buscar')}>Volver a buscar</Button>
       </div>
     )
@@ -169,7 +186,7 @@ export default function ListingDetailPage() {
   ].filter(a => a.ok) : []
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-10">
+    <div className="max-w-2xl mx-auto space-y-6 pb-28">
 
       {/* Cabecera */}
       <div className="flex items-center gap-3">
@@ -334,15 +351,33 @@ export default function ListingDetailPage() {
             <span>Publicado {new Date(detail.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
           </div>
 
-          <Button
-            className="w-full gap-2"
-            size="lg"
-            onClick={handleContact}
-            disabled={contacting || !detail?.owner_id || detail.owner_id === user?.id}
-          >
-            <MessageCircle className="h-4 w-4" />
-            {contacting ? 'Abriendo chat...' : detail?.owner_id === user?.id ? 'Tu anuncio' : 'Contactar con el propietario'}
-          </Button>
+          <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border border-border rounded-2xl p-4 shadow-lg">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xl font-bold leading-none">
+                  {Number(detail.monthly_rent).toLocaleString('es-ES')}€
+                  <span className="text-sm font-normal text-muted-foreground ml-1">/mes</span>
+                </p>
+                {detail.bills_included
+                  ? <p className="text-xs text-green-600 font-medium mt-0.5">Gastos incluidos</p>
+                  : detail.deposit != null
+                    ? <p className="text-xs text-muted-foreground mt-0.5">Fianza: {Number(detail.deposit).toLocaleString('es-ES')}€</p>
+                    : null
+                }
+              </div>
+              <Button
+                className="gap-2 shrink-0"
+                variant={detail?.owner_id === user?.id ? 'outline' : 'default'}
+                onClick={detail?.owner_id === user?.id
+                  ? () => navigate(`/publicar?tipo=habitacion&editId=${detail!.id}`)
+                  : handleContact}
+                disabled={contacting || !detail?.owner_id}
+              >
+                <MessageCircle className="h-4 w-4" />
+                {contacting ? 'Abriendo...' : detail?.owner_id === user?.id ? 'Editar anuncio' : 'Contactar'}
+              </Button>
+            </div>
+          </div>
         </>
       )}
     </div>

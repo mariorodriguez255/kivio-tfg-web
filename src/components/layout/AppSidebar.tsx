@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { Home, Search, PlusSquare, MessageCircle, User, LogOut } from 'lucide-react'
 import {
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/sidebar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 import logo from '@/assets/kiviologo.png'
 
 const navItems = [
@@ -28,6 +30,49 @@ export function AppSidebar() {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!profile?.id) return
+
+    let isSubscribed = true
+
+    async function fetchUnread() {
+      try {
+        const { data, error } = await supabase.rpc('chat_get_user_conversations', {
+          p_user_id: profile!.id,
+          p_limit: 50,
+          p_offset: 0,
+        })
+        if (error) {
+          console.error('[AppSidebar] Error al obtener no leídos:', error.message)
+          return
+        }
+        if (data && isSubscribed) {
+          const total = (data as { unread_count: number }[]).reduce(
+            (sum, c) => sum + (c.unread_count || 0), 0
+          )
+          setUnreadCount(total)
+        }
+      } catch (err) {
+        console.error('[AppSidebar] Excepción en fetchUnread:', err)
+      }
+    }
+
+    fetchUnread()
+
+    const ch = supabase
+      .channel('sidebar-unread')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, () => {
+        if (isSubscribed) fetchUnread()
+      })
+      .subscribe()
+
+    return () => {
+      isSubscribed = false
+      supabase.removeChannel(ch)
+    }
+  }, [profile?.id])
 
   function isActive(url: string, exact: boolean) {
     if (exact) return location.pathname === url
@@ -72,7 +117,14 @@ export function AppSidebar() {
                     onClick={() => navigate(item.url)}
                     className="cursor-pointer"
                   >
-                    <item.icon />
+                    <div className="relative shrink-0">
+                      <item.icon />
+                      {item.title === 'Chat' && unreadCount > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center leading-none">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </div>
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

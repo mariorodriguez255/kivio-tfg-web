@@ -39,8 +39,8 @@ const IDIOMAS   = ['Español','Inglés','Francés','Alemán','Italiano','Portugu
 const STEPS     = ['Cuenta','Básicos','Estilo de vida','Sobre mí','Redes sociales']
 
 // ── componentes auxiliares ────────────────────────────────────────────────────
-function Opt({ value: _value, selected, onClick, children }: {
-  value: string; selected: boolean; onClick: () => void; children: React.ReactNode
+function Opt({ selected, onClick, children }: {
+  selected: boolean; onClick: () => void; children: React.ReactNode
 }) {
   return (
     <button type="button" onClick={onClick}
@@ -128,18 +128,18 @@ function Step2({ d, s }: { d: FormData; s: (k: keyof FormData, v: unknown) => vo
         </div>
       </div>
       <div className="space-y-2">
-        <Label>Género *</Label>
+        <Label>Género <span className="text-destructive">*</span></Label>
         <div className="flex gap-2 flex-wrap">
           {[['hombre','Hombre'],['mujer','Mujer'],['otro','Otro']].map(([v,l]) => (
-            <Opt key={v} value={v} selected={d.gender===v} onClick={() => s('gender', v)}>{l}</Opt>
+            <Opt key={v} selected={d.gender===v} onClick={() => s('gender', v)}>{l}</Opt>
           ))}
         </div>
       </div>
       <div className="space-y-2">
-        <Label>Ocupación *</Label>
+        <Label>Ocupación <span className="text-destructive">*</span></Label>
         <div className="flex gap-2 flex-wrap">
           {[['estudiante','Estudiante'],['trabajador','Trabajador'],['freelance','Freelance'],['autonomo','Autónomo'],['otro','Otro']].map(([v,l]) => (
-            <Opt key={v} value={v} selected={d.occupation===v} onClick={() => s('occupation', v)}>{l}</Opt>
+            <Opt key={v} selected={d.occupation===v} onClick={() => s('occupation', v)}>{l}</Opt>
           ))}
         </div>
       </div>
@@ -154,7 +154,7 @@ function Step3({ d, s }: { d: FormData; s: (k: keyof FormData, v: unknown) => vo
         <Label>Horario preferido</Label>
         <div className="flex gap-2">
           {[['dia','☀️ Diurno'],['noche','🌙 Nocturno']].map(([v,l]) => (
-            <Opt key={v} value={v} selected={d.schedule_preference===v} onClick={() => s('schedule_preference',v)}>{l}</Opt>
+            <Opt key={v} selected={d.schedule_preference===v} onClick={() => s('schedule_preference',v)}>{l}</Opt>
           ))}
         </div>
       </div>
@@ -186,7 +186,7 @@ function Step3({ d, s }: { d: FormData; s: (k: keyof FormData, v: unknown) => vo
         <Label>Fumar</Label>
         <div className="flex gap-2 flex-wrap">
           {[['no','No fumo'],['ocasionalmente','Ocasionalmente'],['si','Sí fumo']].map(([v,l]) => (
-            <Opt key={v} value={v} selected={d.smoker===v} onClick={() => s('smoker',v)}>{l}</Opt>
+            <Opt key={v} selected={d.smoker===v} onClick={() => s('smoker',v)}>{l}</Opt>
           ))}
         </div>
       </div>
@@ -194,7 +194,7 @@ function Step3({ d, s }: { d: FormData; s: (k: keyof FormData, v: unknown) => vo
         <Label>Vida social</Label>
         <div className="flex gap-2 flex-wrap">
           {[['tranquilo','🏠 Tranquilo'],['ocasionalmente','🎉 Ocasionalmente'],['muy_social','🎊 Muy social']].map(([v,l]) => (
-            <Opt key={v} value={v} selected={d.party_lifestyle===v} onClick={() => s('party_lifestyle',v)}>{l}</Opt>
+            <Opt key={v} selected={d.party_lifestyle===v} onClick={() => s('party_lifestyle',v)}>{l}</Opt>
           ))}
         </div>
       </div>
@@ -202,7 +202,7 @@ function Step3({ d, s }: { d: FormData; s: (k: keyof FormData, v: unknown) => vo
         <Label>Orden en casa</Label>
         <div className="flex gap-2 flex-wrap">
           {[['muy_ordenado','✨ Muy ordenado'],['normal','👍 Normal'],['relajado','😌 Relajado']].map(([v,l]) => (
-            <Opt key={v} value={v} selected={d.clean_lifestyle===v} onClick={() => s('clean_lifestyle',v)}>{l}</Opt>
+            <Opt key={v} selected={d.clean_lifestyle===v} onClick={() => s('clean_lifestyle',v)}>{l}</Opt>
           ))}
         </div>
       </div>
@@ -210,7 +210,7 @@ function Step3({ d, s }: { d: FormData; s: (k: keyof FormData, v: unknown) => vo
         <Label>Tolerancia al ruido</Label>
         <div className="flex gap-2 flex-wrap">
           {[['silencio','🤫 Silencio'],['normal','🔉 Normal'],['ruido_ok','🔊 Sin problema']].map(([v,l]) => (
-            <Opt key={v} value={v} selected={d.noise_tolerance===v} onClick={() => s('noise_tolerance',v)}>{l}</Opt>
+            <Opt key={v} selected={d.noise_tolerance===v} onClick={() => s('noise_tolerance',v)}>{l}</Opt>
           ))}
         </div>
       </div>
@@ -218,7 +218,7 @@ function Step3({ d, s }: { d: FormData; s: (k: keyof FormData, v: unknown) => vo
         <Label>¿Con qué frecuencia cocinas?</Label>
         <div className="flex gap-2 flex-wrap">
           {[['diario','Diario'],['varias_veces_semana','Varias veces/semana'],['rara_vez','Rara vez'],['nunca','Nunca']].map(([v,l]) => (
-            <Opt key={v} value={v} selected={d.cooking_frequency===v} onClick={() => s('cooking_frequency',v)}>{l}</Opt>
+            <Opt key={v} selected={d.cooking_frequency===v} onClick={() => s('cooking_frequency',v)}>{l}</Opt>
           ))}
         </div>
       </div>
@@ -271,7 +271,7 @@ function Step5({ d, s }: { d: FormData; s: (k: keyof FormData, v: unknown) => vo
       </div>
       <div className="space-y-2">
         <Label>LinkedIn URL</Label>
-        <Input type="url" placeholder="https://linkedin.com/in/..." value={d.linkedin_url} onChange={e => s('linkedin_url', e.target.value)} />
+        <Input type="text" placeholder="https://linkedin.com/in/tu-perfil" value={d.linkedin_url} onChange={e => s('linkedin_url', e.target.value)} />
       </div>
     </div>
   )
@@ -281,11 +281,17 @@ function Step5({ d, s }: { d: FormData; s: (k: keyof FormData, v: unknown) => vo
 function EmailConfirmationScreen({ email }: { email: string }) {
   const [resent, setResent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [resendError, setResendError] = useState<string | null>(null)
 
   async function resend() {
     setLoading(true)
-    await supabase.auth.resend({ type: 'signup', email })
-    setResent(true)
+    setResendError(null)
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    if (error) {
+      setResendError(translateAuthError(error.message))
+    } else {
+      setResent(true)
+    }
     setLoading(false)
   }
 
@@ -318,6 +324,9 @@ function EmailConfirmationScreen({ email }: { email: string }) {
             {resent && (
               <p className="text-sm text-primary font-medium">✓ Email reenviado correctamente</p>
             )}
+            {resendError && (
+              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{resendError}</p>
+            )}
             <Button variant="outline" className="w-full" onClick={resend} disabled={loading || resent}>
               {loading ? 'Enviando...' : resent ? 'Email reenviado' : 'Reenviar email de confirmación'}
             </Button>
@@ -332,6 +341,23 @@ function EmailConfirmationScreen({ email }: { email: string }) {
       </div>
     </div>
   )
+}
+
+// ── traducción de errores Supabase ────────────────────────────────────────────
+function translateAuthError(msg: string): string {
+  if (msg.includes('already registered') || msg.includes('already been registered'))
+    return 'Este email ya está registrado. ¿Quieres iniciar sesión?'
+  if (msg.includes('Password should be at least'))
+    return 'La contraseña debe tener al menos 6 caracteres'
+  if (msg.includes('invalid format') || msg.includes('Unable to validate email'))
+    return 'El formato del email no es válido'
+  if (msg.includes('rate limit') || msg.includes('too many requests'))
+    return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo'
+  if (msg.includes('weak password'))
+    return 'La contraseña es demasiado débil. Usa al menos 6 caracteres'
+  if (msg.includes('network') || msg.includes('fetch'))
+    return 'Error de conexión. Comprueba tu internet e inténtalo de nuevo'
+  return 'Error al crear la cuenta. Inténtalo de nuevo'
 }
 
 // ── página principal ──────────────────────────────────────────────────────────
@@ -349,14 +375,17 @@ export default function RegisterPage() {
   function validate(): string | null {
     if (step === 0) {
       if (!data.email || !data.password || !data.confirmPassword) return 'Completa todos los campos'
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return 'Introduce un email válido'
       if (data.password.length < 6) return 'La contraseña debe tener al menos 6 caracteres'
       if (data.password !== data.confirmPassword) return 'Las contraseñas no coinciden'
     }
     if (step === 1) {
-      if (!data.full_name || !data.age || !data.city || !data.gender || !data.occupation)
-        return 'Completa los campos obligatorios (*)'
-      if (Number(data.age) < 18 || Number(data.age) > 100)
-        return 'La edad debe estar entre 18 y 100 años'
+      if (!data.full_name.trim()) return 'El nombre es obligatorio'
+      if (!data.age) return 'La edad es obligatoria'
+      if (Number(data.age) < 18 || Number(data.age) > 100) return 'La edad debe estar entre 18 y 100 años'
+      if (!data.city.trim()) return 'La ciudad es obligatoria'
+      if (!data.gender) return 'Selecciona tu género'
+      if (!data.occupation) return 'Selecciona tu ocupación'
     }
     return null
   }
@@ -385,7 +414,15 @@ export default function RegisterPage() {
     })
 
     if (signUpError || !authData.user) {
-      setError(signUpError?.message ?? 'Error al crear la cuenta')
+      setError(translateAuthError(signUpError?.message ?? ''))
+      setLoading(false)
+      return
+    }
+
+    // Si el email ya existe pero no está confirmado, Supabase devuelve el usuario
+    // con identities vacío en lugar de error — lo detectamos aquí
+    if (authData.user.identities?.length === 0) {
+      setConfirmedEmail(data.email)
       setLoading(false)
       return
     }
@@ -446,13 +483,13 @@ export default function RegisterPage() {
   if (confirmedEmail) return <EmailConfirmationScreen email={confirmedEmail} />
 
   const progress = ((step + 1) / STEPS.length) * 100
-  const stepComponents = [
-    <Step1 d={data} s={set} />,
-    <Step2 d={data} s={set} />,
-    <Step3 d={data} s={set} />,
-    <Step4 d={data} s={set} />,
-    <Step5 d={data} s={set} />,
-  ]
+  const stepComponents: Record<number, React.ReactNode> = {
+    0: <Step1 d={data} s={set} />,
+    1: <Step2 d={data} s={set} />,
+    2: <Step3 d={data} s={set} />,
+    3: <Step4 d={data} s={set} />,
+    4: <Step5 d={data} s={set} />,
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/20 p-4">

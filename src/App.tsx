@@ -1,16 +1,18 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppLayout } from '@/layouts/AppLayout'
-import LoginPage from '@/pages/auth/LoginPage'
-import RegisterPage from '@/pages/auth/RegisterPage'
-import HomePage from '@/pages/home/HomePage'
-import SearchPage from '@/pages/search/SearchPage'
-import ListingDetailPage from '@/pages/search/ListingDetailPage'
-import RoommateDetailPage from '@/pages/search/RoommateDetailPage'
-import PublishPage from '@/pages/publish/PublishPage'
-import ChatPage from '@/pages/chat/ChatPage'
-import ProfilePage from '@/pages/profile/ProfilePage'
+
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
+const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'))
+const HomePage = lazy(() => import('@/pages/home/HomePage'))
+const SearchPage = lazy(() => import('@/pages/search/SearchPage'))
+const ListingDetailPage = lazy(() => import('@/pages/search/ListingDetailPage'))
+const RoommateDetailPage = lazy(() => import('@/pages/search/RoommateDetailPage'))
+const PublishPage = lazy(() => import('@/pages/publish/PublishPage'))
+const ChatPage = lazy(() => import('@/pages/chat/ChatPage'))
+const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'))
 
 function LoadingScreen() {
   return (
@@ -36,22 +38,24 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-      <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
 
-      <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-        <Route index element={<HomePage />} />
-        <Route path="/buscar" element={<SearchPage />} />
-        <Route path="/buscar/habitacion/:id" element={<ListingDetailPage />} />
-        <Route path="/buscar/companero/:id" element={<RoommateDetailPage />} />
-        <Route path="/publicar" element={<PublishPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:conversationId" element={<ChatPage />} />
-        <Route path="/perfil" element={<ProfilePage />} />
-      </Route>
+        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+          <Route index element={<HomePage />} />
+          <Route path="/buscar" element={<SearchPage />} />
+          <Route path="/buscar/habitacion/:id" element={<ListingDetailPage />} />
+          <Route path="/buscar/companero/:id" element={<RoommateDetailPage />} />
+          <Route path="/publicar" element={<PublishPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:conversationId" element={<ChatPage />} />
+          <Route path="/perfil" element={<ProfilePage />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   )
 }

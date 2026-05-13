@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
@@ -20,38 +21,11 @@ import {
   Pencil, LogOut, MapPin, Briefcase, Sun, Moon, AlarmClock, Cigarette,
   PartyPopper, Sparkles, Volume2, ChefHat, PawPrint, Globe, Tag,
   AtSign, Link, Mail, BadgeCheck, User, Loader2,
-  BedDouble, Users, Euro, Pause, Play, Trash2, Eye, Plus,
+  BedDouble, Users, Euro, Pause, Play, Trash2, Eye, Plus, Camera,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getInitials } from '@/lib/utils'
-
-// ── Mapas de etiquetas ────────────────────────────────────────────────────────
-const GENDER: Record<string, string> = { hombre: 'Hombre', mujer: 'Mujer', otro: 'Otro' }
-const OCCUPATION: Record<string, string> = {
-  estudiante: 'Estudiante', trabajador: 'Trabajador', freelance: 'Freelance',
-  autonomo: 'Autónomo', otro: 'Otro',
-}
-const SCHEDULE: Record<string, string> = { dia: 'Diurno', noche: 'Nocturno' }
-const WAKEUP: Record<string, string> = {
-  antes_8am: 'Antes de las 8am',
-  '8am_10am': 'Entre las 8-10am',
-  despues_10am: 'Después de las 10am',
-}
-const BEDTIME: Record<string, string> = {
-  antes_11pm: 'Antes de las 11pm',
-  '11pm_1am': 'Entre las 11pm-1am',
-  despues_1am: 'Después de la 1am',
-}
-const SMOKER: Record<string, string> = { si: 'Sí fumo', no: 'No fumo', ocasionalmente: 'Ocasionalmente' }
-const PARTY: Record<string, string> = { muy_social: 'Muy social', ocasionalmente: 'Ocasionalmente', tranquilo: 'Tranquilo' }
-const CLEAN: Record<string, string> = { muy_ordenado: 'Muy ordenado', normal: 'Normal', relajado: 'Relajado' }
-const NOISE: Record<string, string> = { silencio: 'Silencio total', normal: 'Normal', ruido_ok: 'Tolerante al ruido' }
-const COOKING: Record<string, string> = {
-  diario: 'A diario',
-  varias_veces_semana: 'Varias veces/semana',
-  rara_vez: 'Rara vez',
-  nunca: 'Nunca',
-}
+import { GENDER, OCCUPATION, SCHEDULE, WAKEUP, BEDTIME, SMOKER, PARTY, CLEAN, NOISE, COOKING } from '@/lib/translations'
 
 // ── Subcomponentes ────────────────────────────────────────────────────────────
 function LifeItem({
@@ -169,7 +143,6 @@ function MisAnuncios({ userId }: { userId: string }) {
   }
 
   async function deleteListing(id: string) {
-    if (!window.confirm('¿Seguro que quieres eliminar este anuncio? Esta acción no se puede deshacer.')) return
     setBusy(id)
     const { error } = await supabase.from('listings').delete().eq('id', id)
     if (!error) {
@@ -195,7 +168,6 @@ function MisAnuncios({ userId }: { userId: string }) {
   }
 
   async function deleteRoommate(id: string) {
-    if (!window.confirm('¿Seguro que quieres eliminar este anuncio? Esta acción no se puede deshacer.')) return
     setBusy(id)
     const { error } = await supabase.from('roommate_listings').delete().eq('id', id)
     if (!error) {
@@ -278,7 +250,7 @@ function MisAnuncios({ userId }: { userId: string }) {
                     </div>
                     <Badge
                       variant={l.status === 'active' ? 'default' : 'secondary'}
-                      className="text-[10px] shrink-0"
+                      className="text-xs py-0.5 shrink-0"
                     >
                       {l.status === 'active' ? 'Activo' : l.status === 'paused' ? 'Pausado' : l.status}
                     </Badge>
@@ -298,13 +270,39 @@ function MisAnuncios({ userId }: { userId: string }) {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="h-7 w-7 shrink-0"
                       disabled={busy === l.id}
-                      onClick={() => deleteListing(l.id)}
-                      title="Eliminar"
+                      onClick={() => navigate(`/publicar?tipo=habitacion&editId=${l.id}`)}
+                      title="Editar"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger
+                        className="h-7 w-7 shrink-0 inline-flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 disabled:opacity-50 transition-colors"
+                        disabled={busy === l.id}
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Eliminar anuncio?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción no se puede deshacer. El anuncio será eliminado permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => deleteListing(l.id)}
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 ))
               )}
@@ -342,7 +340,7 @@ function MisAnuncios({ userId }: { userId: string }) {
                     </div>
                     <Badge
                       variant={r.status === 'active' ? 'default' : 'secondary'}
-                      className="text-[10px] shrink-0"
+                      className="text-xs py-0.5 shrink-0"
                     >
                       {r.status === 'active' ? 'Activo' : r.status === 'paused' ? 'Pausado' : r.status}
                     </Badge>
@@ -362,13 +360,39 @@ function MisAnuncios({ userId }: { userId: string }) {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="h-7 w-7 shrink-0"
                       disabled={busy === r.id}
-                      onClick={() => deleteRoommate(r.id)}
-                      title="Eliminar"
+                      onClick={() => navigate(`/publicar?tipo=companero&editId=${r.id}`)}
+                      title="Editar"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger
+                        className="h-7 w-7 shrink-0 inline-flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 disabled:opacity-50 transition-colors"
+                        disabled={busy === r.id}
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Eliminar anuncio?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción no se puede deshacer. El anuncio será eliminado permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => deleteRoommate(r.id)}
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 ))
               )}
@@ -411,6 +435,49 @@ export default function ProfilePage() {
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Solo se permiten imágenes JPG, PNG o WebP')
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no puede superar 5 MB'); return }
+
+    setUploadingAvatar(true)
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `${profile.id}/avatar.${ext}`
+
+    const { error: uploadErr } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, contentType: file.type })
+
+    if (uploadErr) {
+      toast.error('Error al subir la imagen')
+      setUploadingAvatar(false)
+      return
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    const urlWithBust = `${publicUrl}?t=${Date.now()}`
+
+    const { error: updateErr } = await supabase
+      .from('profiles').update({ avatar_url: urlWithBust }).eq('id', profile.id)
+
+    if (!updateErr) {
+      await refreshProfile()
+      toast.success('Foto de perfil actualizada')
+    } else {
+      toast.error('Error al actualizar el perfil')
+    }
+
+    setUploadingAvatar(false)
+    if (avatarInputRef.current) avatarInputRef.current.value = ''
+  }
   const [form, setForm] = useState<FormState>({
     full_name: '', age: '', city: '', neighborhood: '', gender: '', bio: '',
     occupation: '', schedule_preference: '', wakeup_time: '', bedtime: '',
@@ -448,6 +515,14 @@ export default function ProfilePage() {
 
   async function saveProfile() {
     if (!profile) return
+    if (form.full_name && !form.full_name.trim()) {
+      toast.error('El nombre no puede estar vacío')
+      return
+    }
+    if (form.linkedin_url && !form.linkedin_url.startsWith('https://')) {
+      toast.error('La URL de LinkedIn debe comenzar con https://')
+      return
+    }
     setSaving(true)
 
     const { error } = await supabase
@@ -524,12 +599,36 @@ export default function ProfilePage() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
-            <Avatar className="h-20 w-20 shrink-0">
-              <AvatarImage src={profile.avatar_url ?? undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
-                {getInitials(profile.full_name)}
-              </AvatarFallback>
-            </Avatar>
+            <div
+              className="relative shrink-0 cursor-pointer group"
+              onClick={() => avatarInputRef.current?.click()}
+              title="Cambiar foto de perfil"
+            >
+              <Avatar className="h-20 w-20 ring-2 ring-offset-2 ring-primary/20">
+                <AvatarImage src={profile.avatar_url ?? undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
+                  {getInitials(profile.full_name)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploadingAvatar
+                  ? <Loader2 className="h-5 w-5 text-white animate-spin" />
+                  : <Camera className="h-5 w-5 text-white" />
+                }
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+              {completeness === 100 && (
+                <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
+                  <BadgeCheck className="h-3.5 w-3.5 text-white" />
+                </div>
+              )}
+            </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
@@ -572,11 +671,19 @@ export default function ProfilePage() {
               <p className="text-xs text-muted-foreground">Perfil completado</p>
               <p className="text-xs font-semibold text-primary">{completeness}%</p>
             </div>
-            <Progress value={completeness} className="h-1.5" />
+            <Progress value={completeness} className="h-2" />
             {completeness < 100 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Completa tu perfil para mejorar tus posibilidades de encontrar piso
-              </p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {completenessFields.filter(Boolean).length}/{completenessFields.length} campos completados
+                </p>
+                <button
+                  onClick={openEdit}
+                  className="text-xs text-primary hover:underline font-medium shrink-0"
+                >
+                  Completar perfil →
+                </button>
+              </div>
             )}
           </div>
         </CardContent>

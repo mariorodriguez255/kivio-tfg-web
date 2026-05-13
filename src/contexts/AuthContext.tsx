@@ -21,16 +21,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   async function fetchProfile(userId: string) {
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-      if (data) setProfile(data as Profile)
-    } catch {
-      // fallo silencioso — el perfil queda null
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      // PGRST116 = no rows found (perfil aún no creado), es normal
+      if (error.code !== 'PGRST116') {
+        console.error('[AuthContext] Error al cargar perfil:', error.message)
+      }
+      return
     }
+
+    if (data) setProfile(data as Profile)
   }
 
   async function refreshProfile() {
@@ -39,21 +44,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signOut() {
     await supabase.auth.signOut()
+    setSession(null)
+    setUser(null)
     setProfile(null)
   }
 
   useEffect(() => {
+    let isMounted = true
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setLoading(false))
+        fetchProfile(session.user.id).finally(() => { if (isMounted) setLoading(false) })
       } else {
         setLoading(false)
       }
+    }).catch(() => {
+      if (isMounted) setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
@@ -63,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   return (

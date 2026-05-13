@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kivio — Entrega Parcial TFG</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 11pt;
+      color: #1a1a1a;
+      background: #fff;
+      padding: 0;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 60px 70px;
+    }
+
+    /* Cabecera */
+    .header {
+      border-bottom: 2px solid #1a1a1a;
+      padding-bottom: 18px;
+      margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .header-left h1 {
+      font-size: 26pt;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+
+    .header-left .subtitle {
+      font-size: 10pt;
+      color: #555;
+      margin-top: 5px;
+    }
+
+    .header-right {
+      text-align: right;
+      font-size: 9pt;
+      color: #555;
+      line-height: 1.7;
+    }
+
+    /* Secciones */
+    h2 {
+      font-size: 10pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #555;
+      margin-top: 28px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      line-height: 1.75;
+      color: #222;
+      margin-bottom: 10px;
+    }
+
+    /* Tabla de tecnologías */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 24px;
+      margin-top: 10px;
+    }
+
+    .tech-item {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 10.5pt;
+    }
+
+    .tech-item .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      flex-shrink: 0;
+      margin-bottom: 1px;
+    }
+
+    .tech-item .name {
+      font-weight: 600;
+    }
+
+    .tech-item .desc {
+      color: #555;
+      font-size: 9.5pt;
+    }
+
+    /* Estado actual */
+    .status-list {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 10.5pt;
+    }
+
+    .badge {
+      font-size: 8pt;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      flex-shrink: 0;
+      min-width: 72px;
+      text-align: center;
+    }
+
+    .badge-done {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .badge-wip {
+      background: #fef9c3;
+      color: #854d0e;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #ddd;
+      font-size: 9pt;
+      color: #888;
+      text-align: center;
+    }
+
+    @media print {
+      body { background: white; }
+      .page { padding: 40px 60px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Cabecera -->
+    <div class="header">
+      <div class="header-left">
+        <h1>Kivio (<a href="https://web.kivio.es" target="_blank">web.kivio.es</a>)</h1>
+        <div class="subtitle">Plataforma de búsqueda de pisos compartidos y compañeros</div>
+      </div>
+      <div class="header-right">
+        Trabajo Final de Grado<br />
+        Entrega parcial — 27/03/2026<br />
+        Mario Rodriguez
+      </div>
+    </div>
+
+    <!-- Sobre el proyecto -->
+    <h2>Sobre el proyecto</h2>
+    <p>
+      Kivio nació como un proyecto personal: una aplicación móvil para facilitar la búsqueda de
+      piso compartido y de compañeros de convivencia. La idea surgió de la dificultad real que
+      existe hoy en día para encontrar no solo una habitación, sino una persona con la que
+      realmente sea compatible vivir.
+    </p>
+    <p>
+      La app móvil ya existía y funcionaba antes del TFG. Para este trabajo se ha desarrollado
+      una versión web completa del producto, adaptando toda la lógica y la base de datos
+      existente a un entorno de navegador, con el objetivo de ampliar el alcance de la
+      plataforma y demostrar la viabilidad técnica del proyecto en un contexto académico.
+    </p>
+
+    <!-- Funcionalidad -->
+    <h2>Qué hace la plataforma</h2>
+    <p>
+      Kivio permite a los usuarios registrarse con un perfil detallado de hábitos y estilo de
+      vida. A partir de ahí pueden publicar habitaciones disponibles o anunciar que buscan
+      compañero, buscar y filtrar anuncios de otros usuarios, ver el detalle de cada uno y
+      contactar directamente a través de un chat integrado en tiempo real.
+    </p>
+    <p>
+      El sistema cruza los perfiles para mostrar primero las opciones más compatibles,
+      teniendo en cuenta factores como horarios, hábitos de limpieza, tabaco, mascotas o
+      presupuesto.
+    </p>
+
+    <!-- Tecnologías -->
+    <h2>Tecnologías utilizadas</h2>
+    <div class="tech-grid">
+      <div class="tech-item">
+        <span class="dot"></span>
+        <span class="name">React 19</span>
+        <span class="desc">— interfaz de usuario</span>
+      </div>
+      <div class="tech-item">
+        <span class="dot"></span>
+        <span class="name">TypeScript</span>
+        <span class="desc">— tipado estático</span>
+      </div>
+      <div class="tech-item">
+        <span class="dot"></span>
+        <span class="name">Tailwind CSS</span>
+        <span class="desc">— estilos</span>
+      </div>
+      <div class="tech-item">
+        <span class="dot"></span>
+        <span class="name">shadcn/ui</span>
+        <span class="desc">— componentes de UI</span>
+      </div>
+      <div class="tech-item">
+        <span class="dot"></span>
+        <span class="name">Supabase</span>
+        <span class="desc">— base de datos y auth</span>
+      </div>
+      <div class="tech-item">
+        <span class="dot"></span>
+        <span class="name">PostgreSQL</span>
+        <span class="desc">— almacenamiento</span>
+      </div>
+      <div class="tech-item">
+        <span class="dot"></span>
+        <span class="name">Realtime (WebSocket)</span>
+        <span class="desc">— chat en vivo</span>
+      </div>
+      <div class="tech-item">
+        <span class="dot"></span>
+        <span class="name">Vite</span>
+        <span class="desc">— bundler y build</span>
+      </div>
+    </div>
+
+    <!-- Estado actual -->
+    <h2>Estado actual del desarrollo</h2>
+    <div class="status-list">
+      <div class="status-item">
+        <span class="badge badge-done">Completado</span>
+        Registro con onboarding multistep y verificación de email
+      </div>
+      <div class="status-item">
+        <span class="badge badge-done">Completado</span>
+        Login con sesión persistente y rutas protegidas
+      </div>
+      <div class="status-item">
+        <span class="badge badge-done">Completado</span>
+        Home con recomendaciones personalizadas por compatibilidad
+      </div>
+      <div class="status-item">
+        <span class="badge badge-done">Completado</span>
+        Buscador de habitaciones y compañeros con filtros
+      </div>
+      <div class="status-item">
+        <span class="badge badge-done">Completado</span>
+        Publicación de anuncios (habitación y búsqueda de compañero)
+      </div>
+      <div class="status-item">
+        <span class="badge badge-done">Completado</span>
+        Chat en tiempo real entre usuarios
+      </div>
+      <div class="status-item">
+        <span class="badge badge-done">Completado</span>
+        Perfil de usuario con edición y gestión de anuncios propios
+      </div>
+    </div>
+
+    <div class="footer">
+      Documento de entrega parcial · Kivio · TFG 2025/2026
+    </div>
+
+  </div>
+</body>
+</html>

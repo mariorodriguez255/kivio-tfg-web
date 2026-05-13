@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, Link } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   MapPin, BedDouble, Bath, Sofa, ChevronRight, ChevronLeft,
   Search, PlusSquare, Eye, Users, Cigarette,
-  PawPrint, Euro, Sparkles,
+  PawPrint, Euro, Sparkles, UserCircle2,
 } from 'lucide-react'
 import { getInitials, timeAgo } from '@/lib/utils'
 
@@ -121,26 +121,28 @@ function ScrollRow({ children }: { children: React.ReactNode }) {
 
 // ── card habitación ───────────────────────────────────────────────────────────
 function ListingCard({ l }: { l: ListingResult }) {
-  const navigate = useNavigate()
   const img = l.images?.[0]
+  const [imgError, setImgError] = useState(false)
 
   return (
+    <Link to={`/buscar/habitacion/${l.id}`} className="w-60 shrink-0 snap-start block group">
     <Card
-      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow w-60 shrink-0 snap-start pt-0 gap-0 pb-0 ring-0 border"
-      onClick={() => navigate(`/buscar/habitacion/${l.id}`)}
+      className="overflow-hidden hover:shadow-lg transition-all duration-200 group-hover:-translate-y-1 h-full pt-0 gap-0 pb-0 ring-0 border"
     >
       {/* Imagen */}
-      <div className="relative h-40 bg-muted">
-        {img
-          ? <img src={img} alt={l.title} className="absolute inset-0 w-full h-full object-cover" />
-          : <div className="absolute inset-0 flex items-center justify-center"><BedDouble className="h-8 w-8 text-muted-foreground/20" /></div>
+      <div className="relative h-40 bg-muted overflow-hidden">
+        {img && !imgError
+          ? <img src={img} alt={l.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onError={() => setImgError(true)} />
+          : <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted via-accent/20 to-primary/10">
+              <BedDouble className="h-9 w-9 text-primary/20" />
+            </div>
         }
         {l.bills_included && (
-          <span className="absolute top-2 left-2 bg-green-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+          <span className="absolute top-2 left-2 bg-emerald-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
             Gastos incl.
           </span>
         )}
-        <span className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] flex items-center gap-0.5 px-1.5 py-0.5 rounded-full">
+        <span className="absolute bottom-2 right-2 bg-black/50 backdrop-blur-sm text-white text-[11px] flex items-center gap-0.5 px-1.5 py-0.5 rounded-full">
           <Eye className="h-2.5 w-2.5" />{l.views_count}
         </span>
       </div>
@@ -153,93 +155,94 @@ function ListingCard({ l }: { l: ListingResult }) {
             {Number(l.monthly_rent).toLocaleString('es-ES')}€
             <span className="text-xs font-normal text-muted-foreground ml-0.5">/mes</span>
           </span>
-          <span className="text-[10px] text-muted-foreground">{timeAgo(l.created_at)}</span>
+          <span className="text-xs text-muted-foreground/70">{timeAgo(l.created_at)}</span>
         </div>
 
         {/* Título */}
-        <p className="text-xs font-medium line-clamp-1 leading-tight">{l.title}</p>
+        <p className="text-xs font-semibold line-clamp-1 leading-tight">{l.title}</p>
 
         {/* Ubicación */}
-        <p className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-          <MapPin className="h-2.5 w-2.5 shrink-0" />
+        <p className="text-xs text-muted-foreground flex items-center gap-0.5">
+          <MapPin className="h-3 w-3 shrink-0 text-primary/60" />
           <span className="truncate">{[l.neighborhood, l.city.trim()].filter(Boolean).join(', ')}</span>
         </p>
 
         {/* Badges */}
         <div className="flex flex-wrap gap-1 pt-1 border-t">
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 gap-0.5">
+          <Badge variant="secondary" className="text-[11px] px-1.5 py-0.5 gap-0.5">
             <BedDouble className="h-2.5 w-2.5" />{l.total_rooms} hab.
           </Badge>
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 gap-0.5">
+          <Badge variant="secondary" className="text-[11px] px-1.5 py-0.5 gap-0.5">
             <Bath className="h-2.5 w-2.5" />{l.bathrooms} baño{l.bathrooms !== 1 ? 's' : ''}
           </Badge>
           {l.furnished && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 gap-0.5">
+            <Badge variant="secondary" className="text-[11px] px-1.5 py-0.5 gap-0.5">
               <Sofa className="h-2.5 w-2.5" />Amueblado
             </Badge>
           )}
         </div>
 
         {/* Propietario */}
-        <p className="text-[10px] text-muted-foreground truncate">{l.owner_name}</p>
+        <p className="text-xs text-muted-foreground/70 truncate">{l.owner_name}</p>
       </CardContent>
     </Card>
+    </Link>
   )
 }
 
 // ── card compañero ────────────────────────────────────────────────────────────
 function RoommateCard({ r }: { r: RoommateItem }) {
-  const navigate = useNavigate()
   const p = r.profiles
 
   return (
+    <Link to={`/buscar/companero/${r.id}`} className="w-60 shrink-0 snap-start block group">
     <Card
-      className="cursor-pointer hover:shadow-md transition-shadow w-60 shrink-0 snap-start ring-0 border"
-      onClick={() => navigate(`/buscar/companero/${r.id}`)}
+      className="hover:shadow-lg transition-all duration-200 group-hover:-translate-y-1 h-full ring-0 border"
     >
       <CardContent className="p-3 space-y-2.5">
         <div className="flex items-center gap-2">
-          <Avatar className="h-9 w-9 shrink-0">
+          <Avatar className="h-10 w-10 shrink-0 ring-2 ring-primary/10">
             <AvatarImage src={p?.avatar_url ?? undefined} />
             <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
               {getInitials(p?.full_name ?? null)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="font-semibold text-xs truncate">{p?.full_name ?? 'Usuario'}</p>
-            <p className="text-[10px] text-muted-foreground truncate">
-              {[p?.age ? `${p.age}a` : null, p?.occupation ? OCC[p.occupation] ?? p.occupation : null].filter(Boolean).join(' · ')}
+            <p className="font-semibold text-sm truncate">{p?.full_name ?? 'Usuario'}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {[p?.age ? `${p.age} años` : null, p?.occupation ? OCC[p.occupation] ?? p.occupation : null].filter(Boolean).join(' · ')}
             </p>
           </div>
         </div>
 
-        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{r.title}</p>
+        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{r.title}</p>
 
         <div className="flex items-center gap-0.5 font-bold text-sm">
           <Euro className="h-3.5 w-3.5 text-primary" />
           {Number(r.max_budget).toLocaleString('es-ES')}€
-          <span className="text-[10px] font-normal text-muted-foreground ml-0.5">máx/mes</span>
+          <span className="text-xs font-normal text-muted-foreground ml-0.5">máx/mes</span>
         </div>
 
-        <p className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-          <MapPin className="h-2.5 w-2.5 shrink-0" />
+        <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <MapPin className="h-3 w-3 shrink-0 text-primary/60" />
           {r.city.trim()}
         </p>
 
         <div className="flex flex-wrap gap-1 pt-1.5 border-t">
           {!r.smoker_ok && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 gap-0.5">
+            <Badge variant="secondary" className="text-[11px] px-1.5 py-0.5 gap-0.5">
               <Cigarette className="h-2.5 w-2.5" />No fuma
             </Badge>
           )}
           {r.pets_ok && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 gap-0.5">
+            <Badge variant="secondary" className="text-[11px] px-1.5 py-0.5 gap-0.5">
               <PawPrint className="h-2.5 w-2.5" />Mascotas
             </Badge>
           )}
         </div>
       </CardContent>
     </Card>
+    </Link>
   )
 }
 
@@ -328,6 +331,14 @@ export default function HomePage() {
 
   const firstName = profile?.full_name?.split(' ')[0] ?? ''
 
+  const completenessFields = [
+    !!profile?.full_name, !!profile?.age, !!profile?.city, !!profile?.bio,
+    !!profile?.gender, !!profile?.occupation,
+  ]
+  const completeness = Math.round(
+    (completenessFields.filter(Boolean).length / completenessFields.length) * 100
+  )
+
   return (
     <div className="space-y-8">
 
@@ -361,6 +372,22 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ── Banner perfil incompleto ── */}
+      {profile && completeness < 80 && (
+        <div className="flex items-center gap-3 bg-primary/[0.07] border border-primary/20 rounded-xl p-4 shadow-sm">
+          <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0 ring-2 ring-primary/10">
+            <UserCircle2 className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">Tu perfil está al {completeness}%</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Complétalo para mejorar tus compatibilidades</p>
+          </div>
+          <Button size="sm" onClick={() => navigate('/perfil')} className="shrink-0 text-xs">
+            Completar
+          </Button>
+        </div>
+      )}
+
       {/* ── Habitaciones ── */}
       <section>
         <div className="flex items-center justify-between mb-4">
@@ -378,9 +405,13 @@ export default function HomePage() {
             {Array.from({ length: 5 }).map((_, i) => <ListingSkeleton key={i} />)}
           </div>
         ) : listings.length === 0 ? (
-          <div className="border border-dashed rounded-xl py-12 text-center">
-            <BedDouble className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
-            <p className="text-muted-foreground text-sm">No hay habitaciones disponibles</p>
+          <div className="border border-dashed rounded-xl py-12 text-center bg-gradient-to-b from-muted/30 to-transparent">
+            <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center mx-auto mb-3">
+              <BedDouble className="h-7 w-7 text-primary/40" />
+            </div>
+            <p className="text-sm font-medium text-foreground/70">Sin habitaciones cerca</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-3">Amplía los criterios de búsqueda</p>
+            <Button size="sm" variant="outline" onClick={() => navigate('/buscar')}>Explorar todas</Button>
           </div>
         ) : (
           <ScrollRow>
@@ -406,9 +437,13 @@ export default function HomePage() {
             {Array.from({ length: 5 }).map((_, i) => <RoommateSkeleton key={i} />)}
           </div>
         ) : roommates.length === 0 ? (
-          <div className="border border-dashed rounded-xl py-12 text-center">
-            <Users className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
-            <p className="text-muted-foreground text-sm">No hay anuncios de compañeros</p>
+          <div className="border border-dashed rounded-xl py-12 text-center bg-gradient-to-b from-muted/30 to-transparent">
+            <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center mx-auto mb-3">
+              <Users className="h-7 w-7 text-primary/40" />
+            </div>
+            <p className="text-sm font-medium text-foreground/70">Nadie buscando compañero aún</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-3">¡Sé el primero en publicar!</p>
+            <Button size="sm" variant="outline" onClick={() => navigate('/publicar?tipo=companero')}>Publicar anuncio</Button>
           </div>
         ) : (
           <ScrollRow>
@@ -421,7 +456,7 @@ export default function HomePage() {
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
         <button
           onClick={() => navigate('/publicar?tipo=habitacion')}
-          className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent/40 transition-colors text-left group"
+          className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent/30 hover:shadow-sm transition-all duration-150 text-left group"
         >
           <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
             <BedDouble className="h-4 w-4 text-primary" />
@@ -435,7 +470,7 @@ export default function HomePage() {
 
         <button
           onClick={() => navigate('/publicar?tipo=companero')}
-          className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent/40 transition-colors text-left group"
+          className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent/30 hover:shadow-sm transition-all duration-150 text-left group"
         >
           <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
             <Users className="h-4 w-4 text-primary" />
